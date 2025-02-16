@@ -36,9 +36,9 @@
 #define LEDC_MODE               LEDC_LOW_SPEED_MODE
 #define LEDC_DUTY_RES           LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
 #define LEDC_TIMER				LEDC_TIMER_0
-#define LEDC_FREQUENCY          (454) // Frequency in Hertz. Set frequency at 4 kHz
+#define LEDC_FREQUENCY  454 // Frequency in Hertz. Set frequency at 4 kHz
 
-#define LEDC_OUTPUT_IO          (16) // Define the output GPIO
+#define LEDC_OUTPUT_IO	16 // Define the output GPIO
 #define LEDC_CHANNEL            LEDC_CHANNEL_0
 
 #define FADE_RESOLUTION			10
@@ -125,13 +125,43 @@ void taskClient(void *pvParameters){
 	/* vTaskDelete(NULL); */
 }
 
+static void doMovement(char direction)
+{
+	ESP_LOGI("DEBUG", "Direction is %d", direction_test);
+	switch (direction) {
+		case 'u':
+			// direction_test = (direction_test + 1) % 100;
+			direction_test = 30;
+			move(direction_test);
+			break;
+		case 'd':
+			if (direction_test == 0){
+				direction_test = 100;
+			}else{
+				direction_test = (direction_test - 1) % 100;
+			}
+			move(direction_test);
+			/* move(90); */
+			break;
+		case 'l':
+			//TODO
+			break;
+		case 'r':
+			//TODO
+			break;
+		default:
+			break;
+	}
+}
+
 static void on_receive(const int sock)
 {
     int len;
     char rx_buffer[128];
 	char* TAG = "SERVER_EVENT";
 
-    do {
+    do 
+	{
         len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
         if (len < 0) {
             ESP_LOGE(TAG, "Error occurred during receiving: errno %d", errno);
@@ -142,25 +172,8 @@ static void on_receive(const int sock)
             ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
 
 			char direction = rx_buffer[0];
-
-			switch (direction) {
-				case 'u':
-					direction_test = (direction_test + 1) % 100;
-					move(direction_test);
-					break;
-				case 'd':
-					if (direction_test == 0){
-						direction_test = 100;
-					}else{
-						direction_test = (direction_test - 1) % 100;
-					}
-					move(direction_test);
-					/* move(90); */
-					break;
-				default:
-					break;
-			}
-
+			doMovement(direction);
+			
             // send() can return less bytes than supplied length.
             // Walk-around for robust implementation.
             int to_write = len;
@@ -225,7 +238,8 @@ void taskServer(void *pvParameters){
         goto CLEAN_UP;
     }
 
-    while (1) {
+    while (1) 
+	{
         ESP_LOGI(TAG, "Socket listening");
 		
 		// Accept a connection, collect client's IP
@@ -267,17 +281,11 @@ int getDuty(double duty){
 	return (pow(2, LEDC_DUTY_RES) * duty);
 }
 
-static void setDuty(int duty){
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, getDuty(duty)));
-	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-}
-
-static void blink_led(void){
-	gpio_set_level(BLINK_GPIO, s_led_state);
-}
-
 static void ledc_setup(){
 	// Timer Configuration
+	gpio_reset_pin(LEDC_OUTPUT_IO);
+	gpio_set_direction(LEDC_OUTPUT_IO, GPIO_MODE_OUTPUT);
+
 	ledc_timer_config_t timer_conf = {
 		.speed_mode = LEDC_MODE,
 		.duty_resolution = LEDC_DUTY_RES,
@@ -286,7 +294,6 @@ static void ledc_setup(){
 		.clk_cfg = LEDC_AUTO_CLK
 	};
 	ESP_ERROR_CHECK(ledc_timer_config(&timer_conf));
-
 	// Channel Configuration
 	ledc_channel_config_t channel_conf = {
 		.speed_mode = LEDC_MODE,
@@ -300,21 +307,11 @@ static void ledc_setup(){
 	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf));
 }
 
-void taskBlinkLED(void *pvParameters){
-	gpio_reset_pin(BLINK_GPIO);
-	gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
-	while(1){
-		s_led_state = !s_led_state;
-		blink_led();
-		ESP_LOGI("BLINK", "Blink %d", s_led_state);
-		vTaskDelay(pdMS_TO_TICKS(BLINK_PERIOD));
-	}
-}
-
-
 void move(int direction){
-	ledc_setup();
-	setDuty(direction);
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, getDuty(direction)));
+	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+
+	ESP_LOGI("DUTY CHECK", "Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL));
 
 	// Pulse of : 800 - 1100 uS (Reverse)
 	// Pulse of : 1900 - 2200 uS (Forward)
@@ -325,8 +322,6 @@ void move(int direction){
 	//
 	// 1900 uS = 86
 	// 2200 uS = 100
-
-	ESP_LOGI("MOTOR", "Duty %d", direction);
 }
 
 static void setup(){
@@ -349,11 +344,15 @@ static void setup(){
 }
 
 void app_main() {
+	ledc_setup();
+	
 	gpio_reset_pin(BLINK_GPIO);
 	gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
 	s_led_state = 1;
-	blink_led();
+	gpio_set_level(BLINK_GPIO, s_led_state);
+
 	vTaskDelay(pdMS_TO_TICKS(5000));
+	
 	if (wifi_setup_init()){
 		/* xTaskCreate( */
 		/* 		taskClient, */
@@ -371,5 +370,4 @@ void app_main() {
 			NULL
 		);
 	}
-	setup();
 }
