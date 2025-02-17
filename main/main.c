@@ -38,8 +38,11 @@
 #define LEDC_TIMER				LEDC_TIMER_0
 #define LEDC_FREQUENCY  454 // Frequency in Hertz. Set frequency at 4 kHz
 
-#define LEDC_OUTPUT_IO	16 // Define the output GPIO
-#define LEDC_CHANNEL            LEDC_CHANNEL_0
+#define LEDC_OUTPUT_IO1	16 // Define the output GPIO
+#define LEDC_OUTPUT_IO2	18 // Define the output GPIO
+
+#define LEDC_CHANNEL1            LEDC_CHANNEL_0
+#define LEDC_CHANNEL2            LEDC_CHANNEL_1
 
 #define FADE_RESOLUTION			10
 
@@ -131,7 +134,7 @@ static void doMovement(char direction)
 	switch (direction) {
 		case 'u':
 			// direction_test = (direction_test + 1) % 100;
-			direction_test = 30;
+			direction_test = 50;
 			move(direction_test);
 			break;
 		case 'd':
@@ -283,9 +286,11 @@ int getDuty(double duty){
 
 static void ledc_setup(){
 	// Timer Configuration
-	gpio_reset_pin(LEDC_OUTPUT_IO);
-	gpio_set_direction(LEDC_OUTPUT_IO, GPIO_MODE_OUTPUT);
-
+	gpio_reset_pin(LEDC_OUTPUT_IO1);
+	gpio_set_direction(LEDC_OUTPUT_IO1, GPIO_MODE_OUTPUT);
+	gpio_reset_pin(LEDC_OUTPUT_IO2);
+	gpio_set_direction(LEDC_OUTPUT_IO2, GPIO_MODE_OUTPUT);
+	
 	ledc_timer_config_t timer_conf = {
 		.speed_mode = LEDC_MODE,
 		.duty_resolution = LEDC_DUTY_RES,
@@ -295,23 +300,40 @@ static void ledc_setup(){
 	};
 	ESP_ERROR_CHECK(ledc_timer_config(&timer_conf));
 	// Channel Configuration
-	ledc_channel_config_t channel_conf = {
+	ledc_channel_config_t channel_conf1 = {
 		.speed_mode = LEDC_MODE,
-		.channel = LEDC_CHANNEL,
+		.channel = LEDC_CHANNEL1,
 		.timer_sel = LEDC_TIMER,
 		.intr_type = LEDC_INTR_DISABLE,
-		.gpio_num = LEDC_OUTPUT_IO,
+		.gpio_num = LEDC_OUTPUT_IO1,
 		.duty = 0,
 		.hpoint = 0
 	};
-	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf));
+	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf1));
+
+	// Channel Configuration
+	ledc_channel_config_t channel_conf2 = {
+		.speed_mode = LEDC_MODE,
+		.channel = LEDC_CHANNEL2,
+		.timer_sel = LEDC_TIMER,
+		.intr_type = LEDC_INTR_DISABLE,
+		.gpio_num = LEDC_OUTPUT_IO2,
+		.duty = 0,
+		.hpoint = 0
+	};
+	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf2));
 }
 
 void move(int direction){
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, getDuty(direction)));
-	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getDuty(direction)));
+	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
 
-	ESP_LOGI("DUTY CHECK", "Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL));
+	ESP_LOGI("DUTY CHECK", "Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL1));
+
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getDuty(direction)));
+	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
+
+	ESP_LOGI("DUTY CHECK", "Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
 
 	// Pulse of : 800 - 1100 uS (Reverse)
 	// Pulse of : 1900 - 2200 uS (Forward)
