@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "EPICS_soccer-robot",
-    "project_version":    "4c6356f-dirty",
+    "project_version":    "a01a29d-dirty",
     "project_path":       "C:/Users/mahd/Documents/SoccerRobotsESP32",
     "idf_path":           "C:/Users/mahd/esp/v5.4/esp-idf",
     "build_dir":          "C:/Users/mahd/Documents/SoccerRobotsESP32/build",
@@ -11,7 +11,7 @@
     "app_elf":            "EPICS_soccer-robot.elf",
     "app_bin":            "EPICS_soccer-robot.bin",
     "build_type":         "flash_app",
-    "git_revision":       "v5.4",
+    "git_revision":       "v5.4-dirty",
     "target":             "esp32s2",
     "rev":                "",
     "min_rev":            "0",

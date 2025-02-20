@@ -54,18 +54,7 @@ typedef struct sockaddr SA;
 /* static const int ip_protocol = 0; */
 
 static uint8_t s_led_state = 0;
-static int direction_test = 30;
-
-//converts pulse width (in ms) to the proper duty cycle percentage.
-int convertPulseWidthToDutyCycle(int pulseWidth, bool lowerBound)
-{
-	//pulse width / 1000 = duty cycle * period. Cause pulse width initially in milliseconds.
-	//so duty cycle = x, period = 1/freq, so pulseWidth/1000 = x/freq --> x = freq * pulseWidth/1000
-	float trueDutyCycle = pulseWidth / (1000.0) * LEDC_FREQUENCY;
-	if(lowerBound)
-		return floor(trueDutyCycle);
-	return ceil(trueDutyCycle);
-}
+static int direction_test = 0;
 
 static int lowerReverseBound = 0;
 static int upperReverseBound = 0;
@@ -149,7 +138,8 @@ typedef struct {
 
 Movement* getMovementStruct(char *buffer, int length)
 {
-	Movement *theStruct = malloc(sizeof(Movement));
+	Movement *theStruct = malloc(sizeof(Movement)); // Allocate memory
+    *theStruct = (Movement){false, false, false, false}; // Proper struct initialization
 	for(int i = 0; i < length; i++)
 	{
 		if(buffer[i] == 'u')
@@ -166,17 +156,13 @@ Movement* getMovementStruct(char *buffer, int length)
 
 static void doMovement(Movement *movementDirections)
 {
-	  
-	ESP_LOGI("DEBUG", "Direction is %d", direction_test);
+	ESP_LOGI("DEBUG", "Direction is %d, forward is %d, left is %d, right is %d, back is %d, ", direction_test, movementDirections->forward, movementDirections->left, movementDirections->right, movementDirections->back);
 	if(movementDirections->forward)
 	{
 		if(direction_test < 100)
 			direction_test++;
-		if(direction_test == 1)
-			direction_test = lowerReverseBound;
-		if(direction_test == upperReverseBound + 1)
-			direction_test = lowerForwardBound;
-		
+		if(direction_test == 1 || direction_test == upperReverseBound + 1)
+			direction_test = lowerForwardBound;		
 	}
 	if(movementDirections->back)
 	{
@@ -198,7 +184,6 @@ static void doMovement(Movement *movementDirections)
 	else
 	{
 		ESP_LOGI("ERROR", "For some reason, none of the user inputs are being pressed.");
-		return;
 	}
 	move(direction_test);
 }
@@ -324,9 +309,31 @@ CLEAN_UP:
     vTaskDelete(NULL);
 }
 
-int getDuty(double duty){	
+//Raw Duty = (Percent/100) * (2^LEDC_DUTY_RES)
+
+//Gets the raw duty value from the percentage.
+int getRawDutyFromPercent(float duty){	
 	duty = duty / 100;	
 	return (pow(2, LEDC_DUTY_RES) * duty);
+}
+
+float getPercentFromRawDuty(float duty)
+{
+	return (duty*100)/(pow(2, LEDC_DUTY_RES));
+}
+
+//converts pulse width (in ms) to the proper duty cycle RAW.
+int convertPulseWidthToPercentDuty(int pulseWidth, bool lowerBound)
+{
+	//pulse width / 1000 = duty cycle * period. Cause pulse width initially in milliseconds.
+	//so duty cycle = x, period = 1/freq, so pulseWidth/1000 = x/freq --> x = freq * pulseWidth/1000
+	float rawDuty = pulseWidth / (1000.0) * LEDC_FREQUENCY;
+	float trueDutyCycle = getPercentFromRawDuty(rawDuty);
+	//Now, we need the percentage.
+
+	if(lowerBound)
+		return floor(trueDutyCycle);
+	return ceil(trueDutyCycle);
 }
 
 static void ledc_setup(){
@@ -370,12 +377,12 @@ static void ledc_setup(){
 }
 
 void move(int direction){
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getDuty(direction)));
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromPercent(direction)));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
 
 	ESP_LOGI("DUTY CHECK", "Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL1));
 
-	// ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getDuty(direction)));
+	// ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromPercent(direction)));
 	// ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
 
 	// ESP_LOGI("DUTY CHECK", "Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
@@ -411,10 +418,11 @@ static void setup(){
 }
 
 void app_main() {
-	lowerReverseBound = convertPulseWidthToDutyCycle(800, true);
-	upperReverseBound = convertPulseWidthToDutyCycle(1100, false);
-	lowerForwardBound = convertPulseWidthToDutyCycle(1900, true);
-
+	//THESE ARE THE RAW DUTIES
+	lowerReverseBound = convertPulseWidthToPercentDuty(800, true);
+	upperReverseBound = convertPulseWidthToPercentDuty(1100, false);
+	lowerForwardBound = convertPulseWidthToPercentDuty(1900, true);
+	ESP_LOGI("BOUNDS", "Lower bound to reverse motor: %d, upper bound to reverse motor: %d, loewr bound to push motor forward: %d", lowerReverseBound, upperReverseBound, lowerForwardBound);
 	
 	ledc_setup();
 	
