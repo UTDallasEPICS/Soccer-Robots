@@ -34,7 +34,7 @@
 #define BLINK_PERIOD 1000
 
 #define LEDC_MODE               LEDC_LOW_SPEED_MODE
-#define LEDC_DUTY_RES           LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
+#define LEDC_DUTY_RES           LEDC_TIMER_10_BIT // Set duty resolution to 13 bits
 #define LEDC_TIMER				LEDC_TIMER_0
 #define LEDC_FREQUENCY  454 // Frequency in Hertz. Set frequency at 4 kHz
 
@@ -55,6 +55,21 @@ typedef struct sockaddr SA;
 
 static uint8_t s_led_state = 0;
 static int direction_test = 30;
+
+//converts pulse width (in ms) to the proper duty cycle percentage.
+int convertPulseWidthToDutyCycle(int pulseWidth, bool lowerBound)
+{
+	//pulse width / 1000 = duty cycle * period. Cause pulse width initially in milliseconds.
+	//so duty cycle = x, period = 1/freq, so pulseWidth/1000 = x/freq --> x = freq * pulseWidth/1000
+	float trueDutyCycle = pulseWidth / (1000.0) * LEDC_FREQUENCY;
+	if(lowerBound)
+		return floor(trueDutyCycle);
+	return ceil(trueDutyCycle);
+}
+
+static int lowerReverseBound = 0;
+static int upperReverseBound = 0;
+static int lowerForwardBound = 0;
 
 void taskClient(void *pvParameters){
 	const char* TAG;
@@ -128,33 +143,64 @@ void taskClient(void *pvParameters){
 	/* vTaskDelete(NULL); */
 }
 
-static void doMovement(char direction)
+typedef struct {
+	bool forward, left, right, back;
+} Movement;
+
+Movement* getMovementStruct(char *buffer, int length)
 {
-	ESP_LOGI("DEBUG", "Direction is %d", direction_test);
-	switch (direction) {
-		case 'u':
-			// direction_test = (direction_test + 1) % 100;
-			direction_test = 50;
-			move(direction_test);
-			break;
-		case 'd':
-			if (direction_test == 0){
-				direction_test = 100;
-			}else{
-				direction_test = (direction_test - 1) % 100;
-			}
-			move(direction_test);
-			/* move(90); */
-			break;
-		case 'l':
-			//TODO
-			break;
-		case 'r':
-			//TODO
-			break;
-		default:
-			break;
+	Movement *theStruct = malloc(sizeof(Movement));
+	for(int i = 0; i < length; i++)
+	{
+		if(buffer[i] == 'u')
+			theStruct->forward = true;
+		if(buffer[i] == 'd')
+			theStruct->back = true;
+		if(buffer[i] == 'l')
+			theStruct->left  = true;
+		if(buffer[i] == 'r')
+			theStruct->right = true;
 	}
+	return theStruct;
+}
+
+static void doMovement(Movement *movementDirections)
+{
+	  
+	ESP_LOGI("DEBUG", "Direction is %d", direction_test);
+	if(movementDirections->forward)
+	{
+		if(direction_test < 100)
+			direction_test++;
+		if(direction_test == 1)
+			direction_test = lowerReverseBound;
+		if(direction_test == upperReverseBound + 1)
+			direction_test = lowerForwardBound;
+		
+	}
+	if(movementDirections->back)
+	{
+		if(direction_test > 0)
+			direction_test--;
+		if(direction_test == lowerReverseBound - 1)
+			direction_test = 0;
+		if(direction_test == lowerForwardBound - 2)
+			direction_test = upperReverseBound;
+	}
+	if(movementDirections->left)
+	{
+
+	}
+	if(movementDirections->right)
+	{
+
+	}
+	else
+	{
+		ESP_LOGI("ERROR", "For some reason, none of the user inputs are being pressed.");
+		return;
+	}
+	move(direction_test);
 }
 
 static void on_receive(const int sock)
@@ -174,8 +220,7 @@ static void on_receive(const int sock)
             rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
             ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
 
-			char direction = rx_buffer[0];
-			doMovement(direction);
+			doMovement(getMovementStruct(rx_buffer, len));
 			
             // send() can return less bytes than supplied length.
             // Walk-around for robust implementation.
@@ -312,16 +357,16 @@ static void ledc_setup(){
 	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf1));
 
 	// Channel Configuration
-	ledc_channel_config_t channel_conf2 = {
-		.speed_mode = LEDC_MODE,
-		.channel = LEDC_CHANNEL2,
-		.timer_sel = LEDC_TIMER,
-		.intr_type = LEDC_INTR_DISABLE,
-		.gpio_num = LEDC_OUTPUT_IO2,
-		.duty = 0,
-		.hpoint = 0
-	};
-	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf2));
+	// ledc_channel_config_t channel_conf2 = {
+	// 	.speed_mode = LEDC_MODE,
+	// 	.channel = LEDC_CHANNEL2,
+	// 	.timer_sel = LEDC_TIMER,
+	// 	.intr_type = LEDC_INTR_DISABLE,
+	// 	.gpio_num = LEDC_OUTPUT_IO2,
+	// 	.duty = 0,
+	// 	.hpoint = 0
+	// };
+	// ESP_ERROR_CHECK(ledc_channel_config(&channel_conf2));
 }
 
 void move(int direction){
@@ -330,10 +375,10 @@ void move(int direction){
 
 	ESP_LOGI("DUTY CHECK", "Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL1));
 
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getDuty(direction)));
-	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
+	// ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getDuty(direction)));
+	// ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
 
-	ESP_LOGI("DUTY CHECK", "Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
+	// ESP_LOGI("DUTY CHECK", "Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
 
 	// Pulse of : 800 - 1100 uS (Reverse)
 	// Pulse of : 1900 - 2200 uS (Forward)
@@ -366,6 +411,11 @@ static void setup(){
 }
 
 void app_main() {
+	lowerReverseBound = convertPulseWidthToDutyCycle(800, true);
+	upperReverseBound = convertPulseWidthToDutyCycle(1100, false);
+	lowerForwardBound = convertPulseWidthToDutyCycle(1900, true);
+
+	
 	ledc_setup();
 	
 	gpio_reset_pin(BLINK_GPIO);
@@ -373,7 +423,7 @@ void app_main() {
 	s_led_state = 1;
 	gpio_set_level(BLINK_GPIO, s_led_state);
 
-	vTaskDelay(pdMS_TO_TICKS(5000));
+	vTaskDelay(pdMS_TO_TICKS(500));
 	
 	if (wifi_setup_init()){
 		/* xTaskCreate( */
