@@ -1,3 +1,4 @@
+<!--used for the overlay when two people are queued up and want to confirm a match-->
 <template>
 <div class="fixed w-full h-full inset-0 bg-black bg-opacity-80 flex" style="z-index: 2;">
     <div class="w-min h-min rounded-lg p-2 bg-gray-500 bg-opacity-90" style="margin: auto;">

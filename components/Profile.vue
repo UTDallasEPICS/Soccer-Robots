@@ -1,3 +1,4 @@
+<!-- template to show the username, profile picture, and logout button -->
 <template>
     <div class="flex md:flex md:flex-grow flex-row-reverse space-x-3 space-x-reverse mt-5 mr-5 mb-2">
         <div>

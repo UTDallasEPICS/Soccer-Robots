@@ -1,3 +1,4 @@
+<!-- template for designing the queue.-->
 <template>
     <div class="border-black rounded-lg border-4 border-b-0 rounded-b-none" style="width: 340px; height: 500px;">
         <p class="text-center border-b-2 border-black border-b-4" style="font-weight: bold; font-size: 24px">Queue</p>

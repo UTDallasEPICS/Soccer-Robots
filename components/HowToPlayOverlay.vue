@@ -1,3 +1,4 @@
+<!--overlay of the how to play mini-page-->
 <template>
     <div class="overlay">
       <div class="content">

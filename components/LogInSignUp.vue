@@ -1,5 +1,4 @@
-
-
+<!--overlay for the login button on the top right side of the navigation bar-->
 <template>
   <div class="flex md:flex md:flex-grow flex-row-reverse space-x-3 mt-5 mr-4 mb-2">
     <div class="">
