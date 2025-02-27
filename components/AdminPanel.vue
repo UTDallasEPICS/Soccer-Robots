@@ -33,6 +33,7 @@
           <!-- Players Dropdown -->
           <div class="w-40">
             <label for="players" class="block text-sm font-medium">Players</label>
+            <!--Way to set numPlayers value with these options. Each <option> is a label to pick from, and whichever one is chosen sets "v_model" to the assigned value.-->
             <select
               id="players"
               v-model="numPlayers"
@@ -83,7 +84,9 @@ const getCookie = (name: string): string | null => {
   return cookie ? decodeURIComponent(cookie.split('=')[1]) : null;
 };
 
+// This emit closes admin panel.
 const emit = defineEmits(['closeAdminPanel']);
+//  Function to call emit
 const emitClose = () => {
   emit('closeAdminPanel');
 };
@@ -93,18 +96,19 @@ const showMatchSettings = ref(false);
 const numPlayers = ref(1); // Default to 1v1 (1 player per team)
 const matchTime = ref('01:00'); // Default match time 1 minute
 
-// Functions
+// Function to shut down robot
 const shutdown = async () => {
   console.log('Shutdown clicked!');
+  //Get user's cookie
   const sruser = getCookie('sruser');
   if (!sruser) {
     alert('User information not found. Please log in again.');
     return;
   }
-
   const user = JSON.parse(sruser);
   const role = user.role;
 
+  //Send request to shutdown robot from backend.
   console.log('Sending request to the backend');
   const response = await fetch('http://localhost:3001/shutdownrobot', {
     method: 'POST',
@@ -135,6 +139,7 @@ const toggleMatchSettings = () => {
 
 // Save Match Settings
 const updateMatchSettings = async () => {
+  //get cookie again to update user stats.
   const sruser = getCookie('sruser');
   if (!sruser) {
     alert('User information not found. Please log in again.');
@@ -144,11 +149,13 @@ const updateMatchSettings = async () => {
   const user = JSON.parse(sruser);
   const role = user.role;
 
+  //if match time in invalid form
   if (!matchTime.value.match(/^\d{1,2}:\d{2}$/)) {
     alert('Invalid match time. Please use the format MM:SS.');
     return;
   }
 
+  //get minutes and seconds, check if they're in right time.
   const [minutes, seconds] = matchTime.value.split(':').map(Number);
   if (minutes < 1 || minutes > 8 || seconds < 0 || seconds >= 60) {
     alert('Match time must be between 1 and 8 minutes, with valid seconds.');
@@ -156,6 +163,7 @@ const updateMatchSettings = async () => {
   }
 
   console.log('Sending match settings to the backend');
+  //send info about the match settings (players and match time) to raspberry pi
   const response = await fetch('http://localhost:3001/editMatchSettings', {
     method: 'POST',
     headers: {

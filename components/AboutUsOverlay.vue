@@ -1,3 +1,4 @@
+<!--This is the overlay for the about us page.-->
 <template>
 <div class="fixed w-full h-full inset-0 bg-black bg-opacity-80 flex" style="z-index: 2">
       <div class="rounded-lg p-2 bg-white" style="width: 500px; height: 400px; margin: auto;">
