@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "EPICS_soccer-robot",
-    "project_version":    "a01a29d-dirty",
+    "project_version":    "5db5610-dirty",
     "project_path":       "C:/Users/mahd/Documents/SoccerRobotsESP32",
     "idf_path":           "C:/Users/mahd/esp/v5.4/esp-idf",
     "build_dir":          "C:/Users/mahd/Documents/SoccerRobotsESP32/build",
@@ -1225,7 +1225,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [ "espressif__esp_tinyusb" ],
             "file": "C:/Users/mahd/Documents/SoccerRobotsESP32/build/esp-idf/main/libmain.a",
-            "sources": [ "C:/Users/mahd/Documents/SoccerRobotsESP32/main/main.c", "C:/Users/mahd/Documents/SoccerRobotsESP32/main/wifi_connectivity.c" ],
+            "sources": [ "C:/Users/mahd/Documents/SoccerRobotsESP32/main/unnededFile.c", "C:/Users/mahd/Documents/SoccerRobotsESP32/main/main.c", "C:/Users/mahd/Documents/SoccerRobotsESP32/main/wifi_connectivity.c" ],
             "include_dirs": [ "." ]
         },
         "mbedtls": {

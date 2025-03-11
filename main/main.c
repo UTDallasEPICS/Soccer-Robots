@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <fcntl.h>
+
 #define PORT					30000
 #define KEEPALIVE_IDLE			CONFIG_KEEPALIVE_IDLE
 #define KEEPALIVE_INTERVAL		CONFIG_KEEPALIVE_INTERVAL
@@ -60,78 +62,6 @@ static int lowerReverseBound = 0;
 static int upperReverseBound = 0;
 static int lowerForwardBound = 0;
 
-void taskClient(void *pvParameters){
-	const char* TAG;
-	TAG = "CLIENT";
-	while(1){
-		// Create IPv4, TCP socket file descriptor
-		// SOCK_STREAM = TCP Socket
-		int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-		if (sockfd < 0){
-			ESP_LOGE(TAG, "Unable to create socket: error %d", errno);
-			close(sockfd);
-			vTaskDelay(pdMS_TO_TICKS(10));
-			continue;
-		}
-		
-		ESP_LOGI(TAG, "Socket successfully created");
-
-		// Setup host
-		const char* hostname = "192.168.1.121";
-		struct hostent *host = gethostbyname(hostname);
-		if (host == NULL){
-			ESP_LOGE(TAG, "cannot resolve host by hostname %s", hostname);
-			close(sockfd);
-			vTaskDelay(pdMS_TO_TICKS(10));
-			continue;
-		}
-
-		ESP_LOGI(TAG, "Host setup successful\nHost Name: %s", host->h_name);
-
-		// Setup socket parameters for host
-		// set up socket address struct with server info
-		struct sockaddr_in address;
-		memset(&address, '\0', sizeof(address));
-		address.sin_family = AF_INET;		// IPv4
-		memcpy((char *)&address.sin_addr.s_addr, host->h_addr_list[0], host->h_length);
-		address.sin_port = htons(30000);	// Server port, big endian
-		/* address.sin_addr.s_addr = *(in_addr_t*)host->h_addr;	// server ip */
-
-		// Connect the socket address parameters with the socket
-		// Block until connection is established or an error occurs
-		// If successful, open the client file descriptor for reading and writing
-		int err = connect(sockfd, (SA*)&address, sizeof(address));
-		if (err != 0) {
-			ESP_LOGE(TAG, "socket unable to connect: err %d", errno);
-			close(sockfd);
-			vTaskDelay(pdMS_TO_TICKS(10));
-			continue;
-		}
-
-		ESP_LOGI(TAG, "Successfully connected");
-
-		char* msg;
-		msg = "Hello from ESP32";
-		send(sockfd, msg, strlen(msg), 0);	// Send a TCP string
-
-		// Receive messages from server
-		char buffer[1024];
-		while (1){
-			recv(sockfd, buffer, 1024, 0);
-			ESP_LOGI("CLIENT", "Response: %s", buffer);
-			vTaskDelay(pdMS_TO_TICKS(1));
-		}
-
-		// Shutdown and Close Socket
-		if (sockfd != -1){
-			ESP_LOGE(TAG, "Shutting down socket and restarting");
-			shutdown(sockfd, 0);
-			close(sockfd);
-		}
-	}
-	/* vTaskDelete(NULL); */
-}
-
 typedef struct {
 	bool forward, left, right, back;
 } Movement;
@@ -159,19 +89,41 @@ static void doMovement(Movement *movementDirections)
 	ESP_LOGI("DEBUG", "Direction is %d, forward is %d, left is %d, right is %d, back is %d, ", direction_test, movementDirections->forward, movementDirections->left, movementDirections->right, movementDirections->back);
 	if(movementDirections->forward)
 	{
-		if(direction_test < 100)
-			direction_test++;
-		if(direction_test == 1 || direction_test == upperReverseBound + 1)
-			direction_test = lowerForwardBound;		
+		if(movementDirections->left)
+		{
+
+		}
+		else if(movementDirections->right)
+		{
+
+		}
+		else
+		{
+			if(direction_test < 100)
+				direction_test++;
+			if(direction_test == 1 || direction_test == upperReverseBound + 1)
+				direction_test = lowerForwardBound;	
+		}
 	}
 	if(movementDirections->back)
 	{
-		if(direction_test > 0)
-			direction_test--;
-		if(direction_test == lowerReverseBound - 1)
-			direction_test = 0;
-		if(direction_test == lowerForwardBound - 2)
-			direction_test = upperReverseBound;
+		if(movementDirections->left)
+		{
+
+		}
+		else if(movementDirections->right)
+		{
+
+		}
+		else
+		{
+			if(direction_test > 0)
+				direction_test--;
+			if(direction_test == lowerReverseBound - 1)
+				direction_test = 0;
+			if(direction_test == lowerForwardBound - 2)
+				direction_test = upperReverseBound;
+		}
 	}
 	if(movementDirections->left)
 	{
@@ -290,6 +242,9 @@ void taskServer(void *pvParameters){
         setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &keepInterval, sizeof(int));
         setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &keepCount, sizeof(int));
 
+		int prevFlags = fcntl(sock, F_GETFL, 0);
+		fcntl(listen_sock, F_SETFL, prevFlags | O_NONBLOCK);
+
         // Convert ip address to string
 		if (source_addr.ss_family == PF_INET) {
             inet_ntoa_r(((struct sockaddr_in *)&source_addr)->sin_addr, addr_str, sizeof(addr_str) - 1);
@@ -398,23 +353,12 @@ void move(int direction){
 	// 2200 uS = 100
 }
 
-static void setup(){
-	
-	/* xTaskCreate( */
-	/* 		taskMove, */
-	/* 		"taskMove", */
-	/* 		4096,			// Stack Size */
-	/* 		NULL,			// Parameters */
-	/* 		1,				// Priority */
-	/* 		NULL); */
-
-	/* xTaskCreate( */
-	/* 		taskBlinkLED, */
-	/* 		"taskBlinkLED", */
-	/* 		2048,			// Stack Size */
-	/* 		NULL,			// Parameters */
-	/* 		1,				// Priority */
-	/* 		NULL); */
+void doBlink()
+{
+	gpio_reset_pin(BLINK_GPIO);
+	gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
+	s_led_state = 1;
+	gpio_set_level(BLINK_GPIO, s_led_state);
 }
 
 void app_main() {
@@ -426,28 +370,8 @@ void app_main() {
 	
 	ledc_setup();
 	
-	gpio_reset_pin(BLINK_GPIO);
-	gpio_set_direction(BLINK_GPIO, GPIO_MODE_OUTPUT);
-	s_led_state = 1;
-	gpio_set_level(BLINK_GPIO, s_led_state);
+	doBlink();
 
 	vTaskDelay(pdMS_TO_TICKS(500));
-	
-	if (wifi_setup_init()){
-		/* xTaskCreate( */
-		/* 		taskClient, */
-		/* 		"taskClient", */
-		/* 		8192,			// Stack Size */
-		/* 		NULL,			// Parameters */
-		/* 		1,				// Priority */
-		/* 		NULL); */
-		xTaskCreate(
-			taskServer,
-			"taskServer",
-			4096,
-			(void*)AF_INET,
-			5,
-			NULL
-		);
-	}
+	move(90);
 }
