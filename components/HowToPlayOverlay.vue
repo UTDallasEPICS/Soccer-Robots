@@ -29,7 +29,7 @@
               </p>
             </div>
           </div>
-          <!-- Right Content -->
+          <!-- Right Content, with the WASD keys -->
           <div class="right-content">
             <br><br>
             <img src="public/WASD.png" alt="W = Forward, A = Left, S = Right, D = Reverse" class="image">
@@ -46,6 +46,7 @@
   }
   </script>
   
+  <!--Created our CSS stuff for this popuup-->
   <style scoped>
   .overlay {
     position: fixed;

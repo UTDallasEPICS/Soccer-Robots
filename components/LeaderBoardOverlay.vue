@@ -44,7 +44,7 @@ const emitClose = () => {
           <th>W/L Ratio</th>
         </tr>
       </thead>
-      <!--corresponding to each category, show the data of the user in regards to each category.-->
+      <!--corresponding to each category defined in thead, show the data of the user in regards to each category.-->
       <tbody>
         <tr class="text-center" v-for="(player, index) in playerData" :key="index">
           <td>{{ index + 1 }}</td>

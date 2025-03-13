@@ -7,9 +7,11 @@
           <p @click="emitClose" class="cursor-pointer">X</p>
       </div>
       <p class="text-black font-black text-lg text-center" style="font-family: Inter; color: #154734; margin-top: 10%; margin-bottom: 3%;">Set Username</p>
+      <!--On submit of input, call handleSubmit but don't refresh the page.-->
       <form @submit.prevent="handleSubmit">
         <label class="font-semibold text-lg block" style="font-family: Inter; color: #777070;margin-left:14.5%; letter-spacing: 1.5px;">USERNAME</label>
         <p class="text-red-600 ml-16 mt-2">{{ mssg }}</p>
+        <!--Set what they say equal to the value "username" with v-model = username-->
         <input class="text-black border-2 border-black p-5 block font-semibold text-sm mt-5" placeholder="Enter username here" style="border-radius: 20px; border-color: #B6B6B6; width: 80%; margin-left: 10.5%; letter-spacing: 1.5px; font-family: Inter;;" type="text" v-model="username" required>
         <button class="text-white border p-4 font-semibold text-lg tracking-widest" style="background-color: #E87500; border-radius: 20px; width: 65%; margin-left: 17%; margin-top: 5%; font-family: Inter;">Set Username</button>
       </form>
@@ -19,11 +21,13 @@
 </template>
 
 <script setup lang="ts">
+//LogInOverlay is the child of the BottomNavBar component, here the overlay will pass in a boolean for if the username si being changed.
 const props = defineProps({
   isChangingUsername: {type: Boolean}
 })
 const username = ref("")
 const mssg = ref("")
+//funciton to send username to see if it's valid and if so, set it
 const handleSubmit = async () => {
   console.log(props.isChangingUsername)
   //if not in range, return
@@ -41,7 +45,7 @@ const handleSubmit = async () => {
       username: username.value
     }
   })
-
+  //if no error, close this layer and refresh.
   if(parseInt(req) == 200)
   {
     emitClose()
@@ -55,8 +59,8 @@ const handleSubmit = async () => {
   }
 }
 
+//we define an emit that will close this layer and emitClose is the function we call to close it.
 const emit = defineEmits(['closeLogIn'])
-
 const emitClose = () => {
   emit('closeLogIn')
 }
