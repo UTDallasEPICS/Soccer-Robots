@@ -56,7 +56,8 @@ typedef struct sockaddr SA;
 /* static const int ip_protocol = 0; */
 
 static uint8_t s_led_state = 0;
-static int direction_test = 0;
+static float directionLeft = 0;
+static float directionRight = 0;
 
 static int lowerReverseBound = 0;
 static int upperReverseBound = 0;
@@ -81,6 +82,21 @@ Movement* getMovementStruct(char *buffer, int length)
 		if(buffer[i] == 'r')
 			theStruct->right = true;
 	}
+
+	//If pressing both, set them both to false.
+	if(theStruct->forward == true && theStruct->backward == true)
+	{
+		theStruct->forward = false;
+		theStruct->backward = false;
+	}
+	
+	//If pressing both, set them both to false.
+	if(theStruct->left == true && theStruct->right == true)
+	{
+		theStruct->left = false;
+		theStruct->right = false;
+	}
+
 	return theStruct;
 }
 
@@ -89,55 +105,56 @@ static void doMovement(Movement *movementDirections)
 	ESP_LOGI("DEBUG", "Direction is %d, forward is %d, left is %d, right is %d, back is %d, ", direction_test, movementDirections->forward, movementDirections->left, movementDirections->right, movementDirections->back);
 	if(movementDirections->forward)
 	{
+		//Forward and turning lefft
 		if(movementDirections->left)
 		{
 
 		}
+		//Forward and turning right
 		else if(movementDirections->right)
 		{
 
 		}
+		//Full forward
 		else
 		{
-			if(direction_test < 100)
-				direction_test++;
-			if(direction_test == 1 || direction_test == upperReverseBound + 1)
-				direction_test = lowerForwardBound;	
+			
 		}
 	}
-	if(movementDirections->back)
+	else if(movementDirections->back)
 	{
+		//Backward and (technically) turning to face right.
 		if(movementDirections->left)
 		{
 
 		}
+		//Backward and (technically) turning to face left.
 		else if(movementDirections->right)
 		{
 
 		}
+		//Full backward
 		else
 		{
-			if(direction_test > 0)
-				direction_test--;
-			if(direction_test == lowerReverseBound - 1)
-				direction_test = 0;
-			if(direction_test == lowerForwardBound - 2)
-				direction_test = upperReverseBound;
+			
 		}
 	}
-	if(movementDirections->left)
+	//Only turning left
+	else if(movementDirections->left)
 	{
 
 	}
-	if(movementDirections->right)
+	//Only turning right
+	else if(movementDirections->right)
 	{
 
 	}
+	//target to no longer moving
 	else
 	{
-		ESP_LOGI("ERROR", "For some reason, none of the user inputs are being pressed.");
+		
 	}
-	move(direction_test);
+	move();
 }
 
 static void on_receive(const int sock)
@@ -242,8 +259,9 @@ void taskServer(void *pvParameters){
         setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &keepInterval, sizeof(int));
         setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &keepCount, sizeof(int));
 
-		int prevFlags = fcntl(sock, F_GETFL, 0);
-		fcntl(listen_sock, F_SETFL, prevFlags | O_NONBLOCK);
+		//Still having it block
+		// int prevFlags = fcntl(sock, F_GETFL, 0);
+		// fcntl(listen_sock, F_SETFL, prevFlags | O_NONBLOCK);
 
         // Convert ip address to string
 		if (source_addr.ss_family == PF_INET) {
@@ -318,29 +336,31 @@ static void ledc_setup(){
 	};
 	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf1));
 
-	// Channel Configuration
-	// ledc_channel_config_t channel_conf2 = {
-	// 	.speed_mode = LEDC_MODE,
-	// 	.channel = LEDC_CHANNEL2,
-	// 	.timer_sel = LEDC_TIMER,
-	// 	.intr_type = LEDC_INTR_DISABLE,
-	// 	.gpio_num = LEDC_OUTPUT_IO2,
-	// 	.duty = 0,
-	// 	.hpoint = 0
-	// };
-	// ESP_ERROR_CHECK(ledc_channel_config(&channel_conf2));
+	Channel Configuration
+	ledc_channel_config_t channel_conf2 = {
+		.speed_mode = LEDC_MODE,
+		.channel = LEDC_CHANNEL2,
+		.timer_sel = LEDC_TIMER,
+		.intr_type = LEDC_INTR_DISABLE,
+		.gpio_num = LEDC_OUTPUT_IO2,
+		.duty = 0,
+		.hpoint = 0
+	};
+	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf2));
 }
 
-void move(int direction){
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromPercent(direction)));
+void move(){
+	//Move the left motor
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromPercent(directionLeft)));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
+	ESP_LOGI("DUTY CHECK", "Left Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL1));
 
-	ESP_LOGI("DUTY CHECK", "Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL1));
 
-	// ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromPercent(direction)));
-	// ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
+	//Move the right motor
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromPercent(directionRight)));
+	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
 
-	// ESP_LOGI("DUTY CHECK", "Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
+	ESP_LOGI("DUTY CHECK", "Right Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
 
 	// Pulse of : 800 - 1100 uS (Reverse)
 	// Pulse of : 1900 - 2200 uS (Forward)
@@ -366,12 +386,32 @@ void app_main() {
 	lowerReverseBound = convertPulseWidthToPercentDuty(800, true);
 	upperReverseBound = convertPulseWidthToPercentDuty(1100, false);
 	lowerForwardBound = convertPulseWidthToPercentDuty(1900, true);
-	ESP_LOGI("BOUNDS", "Lower bound to reverse motor: %d, upper bound to reverse motor: %d, loewr bound to push motor forward: %d", lowerReverseBound, upperReverseBound, lowerForwardBound);
+	ESP_LOGI("BOUNDS", "Lower bound to reverse motor: %d, upper bound to reverse motor: %d, lower bound to push motor forward: %d", lowerReverseBound, upperReverseBound, lowerForwardBound);
 	
 	ledc_setup();
 	
 	doBlink();
 
+	// if (wifi_setup_init()){
+	// 	/* xTaskCreate( */
+	// 	/* 		taskClient, */
+	// 	/* 		"taskClient", */
+	// 	/* 		8192,			// Stack Size */
+	// 	/* 		NULL,			// Parameters */
+	// 	/* 		1,				// Priority */
+	// 	/* 		NULL); */
+	// 	xTaskCreate(
+	// 		taskServer,
+	// 		"taskServer",
+	// 		4096,
+	// 		(void*)AF_INET,
+	// 		5,
+	// 		NULL
+	// 	);
+	// }
+
 	vTaskDelay(pdMS_TO_TICKS(500));
 	move(90);
+
+	
 }
