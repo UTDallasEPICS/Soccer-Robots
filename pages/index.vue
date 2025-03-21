@@ -38,6 +38,7 @@ const ws_controller = ref<WebSocket>()
 
 //Confirmation request controls if we are going to show the overlay of asking the user to confirm they're ready. Initially it's false..
 const confirmationRequest = ref(false)
+//tells us if the user has given a response or not. If yes, then we have to keep the confirmation window open
 const stillNeedsResponse = ref(true)
 //Sent to the client from the server, client then sends this back to show they've accepted. Used to tell clients apart from each other when confirming..
 const confirmationPassword = ref("")
@@ -163,6 +164,7 @@ const leaveQueue = () => {
 
 //when the client has either accepted or denied the confirmation request, send that to the queue server
 const confirmMatch = (accepted: boolean) => {
+  //no longer need the window, so can use this to close it
   stillNeedsResponse.value = false;
   if(ws_queue.value?.OPEN){
     ws_queue.value.send(JSON.stringify({
