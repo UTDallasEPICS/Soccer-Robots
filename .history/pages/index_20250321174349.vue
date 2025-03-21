@@ -15,7 +15,7 @@
       </div>
       <!--when user tries to join or leave queue, run the according functions in this file.-->
       <QueueContainer :queueUsers="queue" @join-queue="joinQueue" @leave-queue="leaveQueue"></QueueContainer>
-      <ConfirmMatchOverlay v-if="confirmationRequest && stillNeedsResponse" @confirm-response="confirmMatch"/>
+      <ConfirmMatchOverlay v-if="confirmationRequest && hasGivenResponse" @confirm-response="confirmMatch"/>
     </div>
   </div>
 
@@ -38,7 +38,7 @@ const ws_controller = ref<WebSocket>()
 
 //Confirmation request controls if we are going to show the overlay of asking the user to confirm they're ready. Initially it's false..
 const confirmationRequest = ref(false)
-const stillNeedsResponse = ref(true)
+const hasGivenResponse = ref(false)
 //Sent to the client from the server, client then sends this back to show they've accepted. Used to tell clients apart from each other when confirming..
 const confirmationPassword = ref("")
 //Used to generate a private passsword for the client in their cookie when a match has started.
@@ -75,17 +75,15 @@ const joinQueue = () => {
     if(type === "MATCH_CONFIRMATION") {
       confirmationPassword.value = payload
       confirmationRequest.value = true
-      stillNeedsResponse.value = true
+      hasGivenResponse.value = false;
     }
     //otherwise if resetting, put request as false.
     else if(type === "MATCH_CONFIRMATION_RESET"){
       confirmationRequest.value = false
-      stillNeedsResponse.value = false
     }
     //else if match starting, send password for the client in the match and make it a part of its cookie so they can return to the match.
     else if(type === "MATCH_START"){
       confirmationRequest.value = false
-      stillNeedsResponse.value = false
       accesspassword.value = payload
       document.cookie = "accesspassword=" + accesspassword.value
       //Creating a new websocket with the controller that is used to send inputs.
@@ -163,7 +161,6 @@ const leaveQueue = () => {
 
 //when the client has either accepted or denied the confirmation request, send that to the queue server
 const confirmMatch = (accepted: boolean) => {
-  stillNeedsResponse.value = false;
   if(ws_queue.value?.OPEN){
     ws_queue.value.send(JSON.stringify({
       type: "CONFIRMATION",

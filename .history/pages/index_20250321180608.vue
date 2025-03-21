@@ -163,7 +163,6 @@ const leaveQueue = () => {
 
 //when the client has either accepted or denied the confirmation request, send that to the queue server
 const confirmMatch = (accepted: boolean) => {
-  stillNeedsResponse.value = false;
   if(ws_queue.value?.OPEN){
     ws_queue.value.send(JSON.stringify({
       type: "CONFIRMATION",

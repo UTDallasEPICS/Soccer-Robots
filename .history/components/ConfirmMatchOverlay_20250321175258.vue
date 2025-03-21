@@ -1,6 +1,6 @@
 <!--used for the overlay when two people are queued up and want to confirm a match-->
 <template>
-<div class="fixed w-full h-full inset-0 bg-black bg-opacity-80 flex" style="z-index: 2;">
+<div class="fixed w-full h-full inset-0 bg-black bg-opacity-80 flex" style="z-index: 2;"">
     <div class="w-min h-min rounded-lg p-2 bg-gray-500 bg-opacity-90" style="margin: auto;">
         <!--Passing in the params for the circle-->
         <ConfirmMatchCircle :radius="250" :progress="progress" :stroke="50"/>
@@ -19,7 +19,6 @@
 <script setup lang="ts">
 const emit = defineEmits(['confirm-response'])
 const updateDelayms: number = 500
-
 
 
 const confirmationTime: number = parseInt(useRuntimeConfig().public.CONFIRMATION_TIMER_DURATION) // in seconds

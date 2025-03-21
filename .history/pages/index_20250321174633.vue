@@ -38,7 +38,7 @@ const ws_controller = ref<WebSocket>()
 
 //Confirmation request controls if we are going to show the overlay of asking the user to confirm they're ready. Initially it's false..
 const confirmationRequest = ref(false)
-const stillNeedsResponse = ref(true)
+const stillNeedsResponse = ref(false)
 //Sent to the client from the server, client then sends this back to show they've accepted. Used to tell clients apart from each other when confirming..
 const confirmationPassword = ref("")
 //Used to generate a private passsword for the client in their cookie when a match has started.
@@ -163,7 +163,7 @@ const leaveQueue = () => {
 
 //when the client has either accepted or denied the confirmation request, send that to the queue server
 const confirmMatch = (accepted: boolean) => {
-  stillNeedsResponse.value = false;
+  
   if(ws_queue.value?.OPEN){
     ws_queue.value.send(JSON.stringify({
       type: "CONFIRMATION",

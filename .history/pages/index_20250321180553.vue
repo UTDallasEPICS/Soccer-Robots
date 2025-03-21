@@ -75,17 +75,15 @@ const joinQueue = () => {
     if(type === "MATCH_CONFIRMATION") {
       confirmationPassword.value = payload
       confirmationRequest.value = true
-      stillNeedsResponse.value = true
+      stillNeedsResponse.value = true;
     }
     //otherwise if resetting, put request as false.
     else if(type === "MATCH_CONFIRMATION_RESET"){
       confirmationRequest.value = false
-      stillNeedsResponse.value = false
     }
     //else if match starting, send password for the client in the match and make it a part of its cookie so they can return to the match.
     else if(type === "MATCH_START"){
       confirmationRequest.value = false
-      stillNeedsResponse.value = false
       accesspassword.value = payload
       document.cookie = "accesspassword=" + accesspassword.value
       //Creating a new websocket with the controller that is used to send inputs.
@@ -163,7 +161,6 @@ const leaveQueue = () => {
 
 //when the client has either accepted or denied the confirmation request, send that to the queue server
 const confirmMatch = (accepted: boolean) => {
-  stillNeedsResponse.value = false;
   if(ws_queue.value?.OPEN){
     ws_queue.value.send(JSON.stringify({
       type: "CONFIRMATION",

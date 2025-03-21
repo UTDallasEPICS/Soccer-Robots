@@ -28,6 +28,10 @@ const confirmationTime: number = parseInt(useRuntimeConfig().public.CONFIRMATION
 const confirmationTicks: number = confirmationTime * (1000 / updateDelayms)
 let confirmationTicksLeft: number = confirmationTicks
 
+const closeConfirmMatch = () => {
+    // confirmationRequest.value = false
+}
+
 const progress = ref<number>(0)
 //once this is activated
 onMounted(() => {

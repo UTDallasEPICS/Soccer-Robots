@@ -5,7 +5,7 @@
         <!--Passing in the params for the circle-->
         <ConfirmMatchCircle :radius="250" :progress="progress" :stroke="50"/>
         <!--on whichever is clicked, do the proper response.-->
-        <button @click="$emit('confirm-response', true)" class = "border-4 rounded-2xl border-black content-center" style="font-size: 24px; font-weight: bold; width: 100%; background-color: #5FE0B7">
+        <button @click="$emit('confirm-response', true); closeConfirmMatch()" class = "border-4 rounded-2xl border-black content-center" style="font-size: 24px; font-weight: bold; width: 100%; background-color: #5FE0B7">
             ACCEPT!
         </button>
         <button @click="$emit('confirm-response', false)" class = "border-4 rounded-2xl border-black content-center" style="font-size: 24px; font-weight: bold; width: 100%; background-color: #FF0000">
@@ -27,6 +27,10 @@ const confirmationTime: number = parseInt(useRuntimeConfig().public.CONFIRMATION
 //the circular bar is not continuoulsy increasing.
 const confirmationTicks: number = confirmationTime * (1000 / updateDelayms)
 let confirmationTicksLeft: number = confirmationTicks
+
+const closeConfirmMatch = () => {
+    // confirmationRequest.value = false
+}
 
 const progress = ref<number>(0)
 //once this is activated
