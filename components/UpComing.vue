@@ -1,3 +1,4 @@
+<!--Component to show the next upcoming match. Currently just set to arbitrary names.-->
 <template>
 <div class="border rounded-lg p-2.5 content-center text-center border-4 border-black" style="width: 100%; height: 70px; padding: 5px; margin-bottom: 3.5%; margin-top: 3.5%;"> 
     <p style="font-style: italic">Up Next </p>
@@ -10,6 +11,7 @@
 </template>
 
 <script setup lang="ts">
+// Sets up random placeholder usernames.
 const user1 = ref("megha66634324545")
 const user2 = ref("crazouteriv")
 </script>

@@ -10,5 +10,6 @@
             "database": "${workspaceFolder:Soccer-Robot-Web}/prisma/test.db"
         }
     ],
-    "sqltools.useNodeRuntime": true
+    "sqltools.useNodeRuntime": true,
+    "idf.portWin": "COM14"
 }

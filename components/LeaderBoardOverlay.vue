@@ -4,7 +4,7 @@ import type {Player} from "@prisma/client"
 const players = ref<Player[]>([])
 
 const sortOption = ref('wins')
-
+// Get data about the player from the leaderboard with fetch request.
 const {data: playerData} = await useFetch('/api/leaderboard', {
    method: 'GET',
    query: {sortedColumn: sortOption},
@@ -12,6 +12,7 @@ const {data: playerData} = await useFetch('/api/leaderboard', {
   })
 
 const emit = defineEmits(['closeLeaderBoardOverlay'])
+//when this function is called, close leaderboard
 const emitClose = () => {
     emit('closeLeaderBoardOverlay')
 }
@@ -21,6 +22,7 @@ const emitClose = () => {
   <div class="fixed w-full h-full inset-0 bg-black bg-opacity-80 flex" style="z-index: 2">
     <div class="rounded-lg p-2 bg-white" style="width: 500px; height: 400px; margin: auto;">
       <div class="w-min h-min text-black" style="margin-left: auto;">
+          <!--if clicking x, close leaderboard--> 
           <p @click="emitClose" class="cursor-pointer">X</p>
       </div>
               
@@ -42,7 +44,7 @@ const emitClose = () => {
           <th>W/L Ratio</th>
         </tr>
       </thead>
-
+      <!--corresponding to each category defined in thead, show the data of the user in regards to each category.-->
       <tbody>
         <tr class="text-center" v-for="(player, index) in playerData" :key="index">
           <td>{{ index + 1 }}</td>

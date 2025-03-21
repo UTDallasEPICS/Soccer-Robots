@@ -1,6 +1,4 @@
-
-//
-
+//this updates user's username in the database.
 export default defineEventHandler(async (event) => {
 
   const prisma = event.context.prisma
@@ -8,7 +6,7 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event)
   const username = body.username
-
+  //checks to see if the player's NEW username is in the database
   const existingUsername = await prisma.player.findFirst({
     where: {
       username
@@ -16,8 +14,10 @@ export default defineEventHandler(async (event) => {
   })
   
   let msg
+  //if not, can update the user's name
   if(!existingUsername){
-     const player = await prisma.player.update({
+    //now gets player with their user id, and updates their username 
+    const player = await prisma.player.update({
       where: {
         user_id: claims['sub'],
       },
@@ -32,6 +32,7 @@ export default defineEventHandler(async (event) => {
     msg = 200
     setCookie(event, 'sruser', JSON.stringify(player))
   } else {
+    //otherwise if such a username already exists, update fails.
     msg = 403
   }
 

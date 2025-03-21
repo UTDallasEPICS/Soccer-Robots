@@ -2,18 +2,22 @@
   <div class="fixed w-full h-full inset-0 bg-black bg-opacity-80 flex" style="z-index: 2">
     <div class="rounded-lg p-4 bg-white" style="width: 500px; height: auto; margin: auto;">
       <div class="w-min h-min text-black" style="margin-left: auto;">
+        <!--This is the "x" mark at the top right of the admin panel, on clicking it will tell it to close the panel.-->
         <p @click="emitClose" class="cursor-pointer">X</p>
       </div>
       <p class="w-full text-center" style="font-size: 1.75em; margin-bottom: 1em;">Admin Panel</p>
       
       <!-- Buttons -->
+
       <div class="flex flex-col items-center gap-4">
+        <!-- this button will shut down the robot, by running the Promise/Function "shutdown".-->
         <button
           @click="shutdown"
           class="bg-red-500 text-white font-bold py-2 px-4 rounded hover:bg-red-700"
         >
           Shutdown Robot
         </button>
+        <!-- this button will let you change match settings-->
         <button
           @click="toggleMatchSettings"
           class="bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-700"
@@ -22,13 +26,14 @@
         </button>
       </div>
 
-      <!-- Match Settings -->
+      <!-- Match Settings. Only show if "showMatchSettings" is enabled by clicking "match settings" -->
       <div v-if="showMatchSettings" class="mt-6">
         <p class="text-lg font-bold text-center mb-4">Update Match Settings</p>
         <div class="flex justify-center gap-4">
           <!-- Players Dropdown -->
           <div class="w-40">
             <label for="players" class="block text-sm font-medium">Players</label>
+            <!--Way to set numPlayers value with these options. Each <option> is a label to pick from, and whichever one is chosen sets "v_model" to the assigned value.-->
             <select
               id="players"
               v-model="numPlayers"
@@ -71,12 +76,17 @@
 <script setup lang="ts">
 // Function to get cookie value by name
 const getCookie = (name: string): string | null => {
+  // Document is a property of the current page/website. We can get the cookies from there by calling "document.cookie"
   const cookies = document.cookie.split('; ');
+  // Find the cookie for the current user with the name that's passed in.
   const cookie = cookies.find((c) => c.startsWith(`${name}=`));
+  // If the cookie was found, decode it and return.
   return cookie ? decodeURIComponent(cookie.split('=')[1]) : null;
 };
 
+// This emit closes admin panel.
 const emit = defineEmits(['closeAdminPanel']);
+//  Function to call emit
 const emitClose = () => {
   emit('closeAdminPanel');
 };
@@ -86,18 +96,19 @@ const showMatchSettings = ref(false);
 const numPlayers = ref(1); // Default to 1v1 (1 player per team)
 const matchTime = ref('01:00'); // Default match time 1 minute
 
-// Functions
+// Function to shut down robot
 const shutdown = async () => {
   console.log('Shutdown clicked!');
+  //Get user's cookie
   const sruser = getCookie('sruser');
   if (!sruser) {
     alert('User information not found. Please log in again.');
     return;
   }
-
   const user = JSON.parse(sruser);
   const role = user.role;
 
+  //Send request to shutdown robot from backend.
   console.log('Sending request to the backend');
   const response = await fetch('http://localhost:3001/shutdownrobot', {
     method: 'POST',
@@ -128,6 +139,7 @@ const toggleMatchSettings = () => {
 
 // Save Match Settings
 const updateMatchSettings = async () => {
+  //get cookie again to update user stats.
   const sruser = getCookie('sruser');
   if (!sruser) {
     alert('User information not found. Please log in again.');
@@ -137,11 +149,13 @@ const updateMatchSettings = async () => {
   const user = JSON.parse(sruser);
   const role = user.role;
 
+  //if match time in invalid form
   if (!matchTime.value.match(/^\d{1,2}:\d{2}$/)) {
     alert('Invalid match time. Please use the format MM:SS.');
     return;
   }
 
+  //get minutes and seconds, check if they're in right time.
   const [minutes, seconds] = matchTime.value.split(':').map(Number);
   if (minutes < 1 || minutes > 8 || seconds < 0 || seconds >= 60) {
     alert('Match time must be between 1 and 8 minutes, with valid seconds.');
@@ -149,6 +163,7 @@ const updateMatchSettings = async () => {
   }
 
   console.log('Sending match settings to the backend');
+  //send info about the match settings (players and match time) to raspberry pi
   const response = await fetch('http://localhost:3001/editMatchSettings', {
     method: 'POST',
     headers: {
