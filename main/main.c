@@ -22,6 +22,7 @@
 
 #include <math.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -89,12 +90,21 @@ static MoveTargets moveTargets = {
     {0, 0}
 };
 
-float pwmFunction(int8_t x, float start, int8_t end)
+float min(float x, float y)
 {
-	float a = abs(end - start);
-	float c = min(start, end)
-	float b = 2 * (end - start) / abs(end - start)
-	return a / (1 + e^(-b*x/20)) + c;
+	if(x <= y)
+	{
+		return x;
+	}
+	return y;
+}
+
+float pwmFunction(uint8_t index)
+{
+	float a = abs(currentTargets[index] - startTargets[index]);
+	float c = min(startTargets[index], currentTargets[index]);
+	float b = 2 * (currentTargets[index] - startTargets[index]) / abs(currentTargets[index] - startTargets[index]);
+	return a / (1 + exp(-b*xValForMotor/20)) + c;
 }
 
 typedef struct {
@@ -117,7 +127,7 @@ Movement* getMovementStruct(char *buffer, int length)
 		i = 5;
 		theStruct->inputChanged = false;
 	}
-	for(i; i < length; i++)
+	for(; i < length; i++)
 	{
 		if(buffer[i] == 'u')
 			theStruct->forward = true;
@@ -150,6 +160,31 @@ static void doMovement(Movement *movementDirections)
 {
 	ESP_LOGI("DEBUG", "Direction Left is %f, Direction Right is %f, forward is %d, left is %d, right is %d, back is %d.", 
 		currentDirection[0], currentDirection[1], movementDirections->forward, movementDirections->left, movementDirections->right, movementDirections->back);
+	
+	if(!movementDirections->inputChanged && xValForMotor >= 50)
+	{
+		//block
+	}
+	else if(!movementDirections->inputChanged)
+	{
+		currentDirection[0] = pwmFunction(0);
+		currentDirection[1] = pwmFunction(1);
+		//update x
+		if(xValForMotor >= 50)
+		{
+			xValForMotor = 50;	
+		}
+	}
+	else
+	{
+		startTargets[0] = currentDirection[0];
+		startTargets[1] = currentDirection[1];
+		//get final targets here
+		xValForMotor = -50;
+		currentDirection[0] = pwmFunction(0);
+		currentDirection[1] = pwmFunction(1);
+	}
+
 	move();
 }
 
@@ -374,13 +409,13 @@ static void ledc_setup(){
 
 void move(){
 	//Move the left motor
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromDirection(currentDirection[0])));
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromBaseDirection(currentDirection[0])));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
 	ESP_LOGI("DUTY CHECK", "Left Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL1));
 
 
 	//Move the right motor
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromDirection(currentDirection[1])));
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromBaseDirection(currentDirection[1])));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
 
 	ESP_LOGI("DUTY CHECK", "Right Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
