@@ -119,23 +119,9 @@ typedef struct {
 Movement* getMovementStruct(char *buffer, int length)
 {
 	Movement *theStruct = malloc(sizeof(Movement)); // Allocate memory
-    *theStruct = (Movement){false, false, false, false, false}; // Proper struct initialization
-	int i = 0;
+    *theStruct = (Movement){false, false, false, false, true}; // Proper struct initialization
 	//if its true
-	if(length >= 4)
-	{
-		if(buffer[0] == 't' && buffer[1] == 'r' && buffer[2] == 'u' && buffer[3] == 'e')
-		{
-			theStruct->inputChanged = true;
-			i = 4;
-		}
-		else
-		{
-			i = 5;
-			theStruct->inputChanged = false;
-		}
-	}
-	for(; i < length; i++)
+	for(int i = 0; i < length; i++)
 	{
 		if(buffer[i] == 'u')
 			theStruct->forward = true;
@@ -145,6 +131,11 @@ Movement* getMovementStruct(char *buffer, int length)
 			theStruct->left  = true;
 		if(buffer[i] == 'r')
 			theStruct->right = true;
+	}
+
+	if(theStruct->forward == false && theStruct-> back == false && theStruct->left == false && theStruct->right == false)
+	{
+		theStruct->inputChanged = false;
 	}
 
 	//If pressing both, set them both to false.
@@ -168,20 +159,19 @@ static void doMovement(Movement *movementDirections)
 {
 	uint64_t x = 0;
 	timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &x);
-	ESP_LOGI("DEBUG", "Direction Left is %f, Direction Right is %f, forward is %d, left is %d, right is %d, back is %d, x is %llu.", 
-		currentDirection[0], currentDirection[1], movementDirections->forward, movementDirections->left, movementDirections->right, movementDirections->back, x);
-	
-	if(!movementDirections->inputChanged && x >= 500)
+	if(movementDirections->inputChanged)
 	{
-		//block
-		return;
+		ESP_LOGI("DEBUG", "Direction Left is %f, Direction Right is %f, forward is %d, left is %d, right is %d, back is %d, x is %llu.", 
+			currentDirection[0], currentDirection[1], movementDirections->forward, movementDirections->left, movementDirections->right, movementDirections->back, x);	
 	}
-	else if(!movementDirections->inputChanged)
+	
+	if(!movementDirections->inputChanged)
 	{
 		if(x >= 500)
 		{
 			timer_pause(TIMER_GROUP_0, TIMER_0);
-			timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 500);	
+			timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 500);
+			return;
 		}
 	}
 	else
@@ -272,7 +262,7 @@ static void on_receive(const int sock)
             ESP_LOGW(TAG, "Connection closed");
         } else {
             rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
-            ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
+            //ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
 
 			doMovement(getMovementStruct(rx_buffer, len));
 			
@@ -480,14 +470,14 @@ void move(uint64_t x){
 	//Move the left motor
 	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromBaseDirection(currentDirection[0])));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
-	ESP_LOGI("DUTY CHECK", "Left Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL1));
+	//ESP_LOGI("DUTY CHECK", "Left Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL1));
 
 
 	//Move the right motor
 	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromBaseDirection(currentDirection[1])));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
 
-	ESP_LOGI("DUTY CHECK", "Right Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
+	//("DUTY CHECK", "Right Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
 
 	// Pulse of : 800 - 1100 uS (Reverse)
 	// Pulse of : 1900 - 2200 uS (Forward)
