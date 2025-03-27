@@ -1,0 +1,21 @@
+##[pylyzer] failed /home/rl2/Documents/esp32_soccer_robot/PiVideoStream.py 1727385041 1269
+.___v_desugar_1 = pyimport "Failure"
+.Failure = pyimport "Failure"
+.PiRGBArray: Never
+.___v_desugar_2 = pyimport "Failure"
+
+.PiCamera: Never
+.threading = pyimport "threading"
+
+.PiVideoStream: ClassType
+.PiVideoStream.frame: Never
+.PiVideoStream.camera: Never
+.PiVideoStream.rawCapture: Never
+.PiVideoStream.stream: Never
+.PiVideoStream.stopped: Never
+.PiVideoStream.__call__: (resolution: Obj := Obj, framerate: Obj := Obj, **kwargs := Type_10) -> PiVideoStream.PiVideoStream
+.PiVideoStream.start: (self: PiVideoStream.PiVideoStream) -> Never
+.PiVideoStream.update: (self: PiVideoStream.PiVideoStream) -> Never
+.PiVideoStream.read: (self: PiVideoStream.PiVideoStream) -> Never
+.PiVideoStream.stop: (self: PiVideoStream.PiVideoStream) -> Never
+
