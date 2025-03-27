@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
+#include "driver/timer.h"
 #include <fcntl.h>
 
 #define PORT					30000
@@ -49,6 +49,18 @@
 
 #define FADE_RESOLUTION			10
 
+
+static timer_config_t config = {
+    .alarm_en = TIMER_ALARM_DIS,        // don’t need alarm
+    .auto_reload = false,               // Auto-reload timer. Don’t want this
+    .divider = 80,                     // Timer clock divider (80000 gives a 1 millisecond resolution. As divider = APB clock frequency / ticks per second. Frequency is 80 MHz, so 80Mhz/1000 means 80000 total )
+    .counter_dir = TIMER_COUNT_UP,     // Count upwards
+    .counter_en = false,         // Start the timer
+    .intr_type = TIMER_INTR_LEVEL,     // Interrupt type
+    .clk_src = TIMER_SRC_CLK_APB,      // Clock source (APB)
+};
+
+
 // Prototypes
 static void setup();
 void move();
@@ -57,9 +69,6 @@ typedef struct sockaddr SA;
 /* static const int ip_protocol = 0; */
 
 static uint8_t s_led_state = 0;
-
-//setting up things we need for natural movement
-static int8_t xValForMotor = -50;
 
 static int lowerReverseBound = 0;
 static int upperReverseBound = 0;
@@ -74,6 +83,8 @@ typedef struct {
     int8_t fullBack[2];
     int8_t forwardLeft[2];
     int8_t forwardRight[2];
+	int8_t backLeft[2];
+	int8_t backRight[2];
     int8_t fullLeft[2];
     int8_t fullRight[2];
     int8_t stop[2];
@@ -85,26 +96,20 @@ static MoveTargets moveTargets = {
     {-85, -85},
     {35, 100},
     {100, 35},
+	{-35, -100},
+	{-100, -35},
     {-50, 50},
     {50, -50},
     {0, 0}
 };
 
-float min(float x, float y)
+float pwmFunction(uint8_t index, uint64_t x)
 {
-	if(x <= y)
-	{
-		return x;
-	}
-	return y;
-}
-
-float pwmFunction(uint8_t index)
-{
-	float a = abs(currentTargets[index] - startTargets[index]);
-	float c = min(startTargets[index], currentTargets[index]);
-	float b = 2 * (currentTargets[index] - startTargets[index]) / abs(currentTargets[index] - startTargets[index]);
-	return a / (1 + exp(-b*xValForMotor/20)) + c;
+	uint32_t x1 = x - 250;
+	float a = fabs(currentTargets[index] - startTargets[index]);
+	float c = fmin(startTargets[index], currentTargets[index]);
+	float b = (1/2.5) * (currentTargets[index] - startTargets[index]) / fabs(currentTargets[index] - startTargets[index]);
+	return a / (1 + exp(-b*x1/20)) + c;
 }
 
 typedef struct {
@@ -114,18 +119,21 @@ typedef struct {
 Movement* getMovementStruct(char *buffer, int length)
 {
 	Movement *theStruct = malloc(sizeof(Movement)); // Allocate memory
-    *theStruct = (Movement){false, false, false, false}; // Proper struct initialization
-	int i;
+    *theStruct = (Movement){false, false, false, false, false}; // Proper struct initialization
+	int i = 0;
 	//if its true
-	if(buffer[0] == 't' && buffer[1] == 'r' && buffer[2] == 'u' && buffer[3] == 'e')
+	if(length >= 4)
 	{
-		theStruct->inputChanged = true;
-		i = 4;
-	}
-	else
-	{
-		i = 5;
-		theStruct->inputChanged = false;
+		if(buffer[0] == 't' && buffer[1] == 'r' && buffer[2] == 'u' && buffer[3] == 'e')
+		{
+			theStruct->inputChanged = true;
+			i = 4;
+		}
+		else
+		{
+			i = 5;
+			theStruct->inputChanged = false;
+		}
 	}
 	for(; i < length; i++)
 	{
@@ -158,34 +166,95 @@ Movement* getMovementStruct(char *buffer, int length)
 
 static void doMovement(Movement *movementDirections)
 {
-	ESP_LOGI("DEBUG", "Direction Left is %f, Direction Right is %f, forward is %d, left is %d, right is %d, back is %d.", 
-		currentDirection[0], currentDirection[1], movementDirections->forward, movementDirections->left, movementDirections->right, movementDirections->back);
+	uint64_t x = 0;
+	timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &x);
+	ESP_LOGI("DEBUG", "Direction Left is %f, Direction Right is %f, forward is %d, left is %d, right is %d, back is %d, x is %llu.", 
+		currentDirection[0], currentDirection[1], movementDirections->forward, movementDirections->left, movementDirections->right, movementDirections->back, x);
 	
-	if(!movementDirections->inputChanged && xValForMotor >= 50)
+	if(!movementDirections->inputChanged && x >= 500)
 	{
 		//block
+		return;
 	}
 	else if(!movementDirections->inputChanged)
 	{
-		currentDirection[0] = pwmFunction(0);
-		currentDirection[1] = pwmFunction(1);
-		//update x
-		if(xValForMotor >= 50)
+		if(x >= 500)
 		{
-			xValForMotor = 50;	
+			timer_pause(TIMER_GROUP_0, TIMER_0);
+			timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 500);	
 		}
 	}
 	else
 	{
 		startTargets[0] = currentDirection[0];
 		startTargets[1] = currentDirection[1];
+		timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
+		timer_start(TIMER_GROUP_0, TIMER_0);
 		//get final targets here
-		xValForMotor = -50;
-		currentDirection[0] = pwmFunction(0);
-		currentDirection[1] = pwmFunction(1);
+		if(movementDirections->forward)
+		{
+			//forwared left
+			if(movementDirections->left)
+			{
+				currentTargets[0] = moveTargets.forwardLeft[0];
+				currentTargets[1] = moveTargets.forwardLeft[1];
+			}
+			//forward and right
+			else if(movementDirections->right)
+			{
+				currentTargets[0] = moveTargets.forwardRight[0];
+				currentTargets[1] = moveTargets.forwardRight[1];
+			}
+			//full forward
+			else
+			{
+				currentTargets[0] = moveTargets.fullForward[0];
+				currentTargets[1] = moveTargets.fullForward[1];
+			}
+		}
+		else if(movementDirections->back)
+		{
+			//back and pressing left
+			if(movementDirections->left)
+			{
+				currentTargets[0] = moveTargets.backLeft[0];
+				currentTargets[1] = moveTargets.backLeft[1];
+			}
+			//back and pressing right
+			else if(movementDirections->right)
+			{
+				currentTargets[0] = moveTargets.backRight[0];
+				currentTargets[1] = moveTargets.backRight[1];
+			}
+			//full force backward
+			else
+			{
+				currentTargets[0] = moveTargets.fullBack[0];
+				currentTargets[1] = moveTargets.fullBack[1];
+			}
+		}
+		//only going left, as we know forward and back aren't presssed
+		else if(movementDirections->left)
+		{
+			currentTargets[0] = moveTargets.fullLeft[0];
+			currentTargets[1] = moveTargets.fullLeft[1];
+		}
+		//only going right, as we know forward and back aren't pressed
+		else if(movementDirections->right)
+		{
+			currentTargets[0] = moveTargets.fullRight[0];
+			currentTargets[1] = moveTargets.fullRight[1];
+		}
+		//otherwise nothing is pressed, want to go back to being stationary.
+		else
+		{
+			currentTargets[0] = moveTargets.stop[0];
+			currentTargets[1] = moveTargets.stop[1];
+		}
 	}
-
-	move();
+	currentDirection[0] = pwmFunction(0, x);
+	currentDirection[1] = pwmFunction(1, x);
+	move(x);
 }
 
 static void on_receive(const int sock)
@@ -407,7 +476,7 @@ static void ledc_setup(){
 	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf2));
 }
 
-void move(){
+void move(uint64_t x){
 	//Move the left motor
 	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromBaseDirection(currentDirection[0])));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
@@ -440,6 +509,7 @@ void doBlink()
 }
 
 void app_main() {
+	timer_init(TIMER_GROUP_0, TIMER_0, &config);
 	//THESE ARE THE RAW DUTIES
 	lowerReverseBound = convertPulseWidthToPercentDuty(800, true);
 	upperReverseBound = convertPulseWidthToPercentDuty(1100, false);
@@ -450,26 +520,23 @@ void app_main() {
 	
 	doBlink();
 
-	// if (wifi_setup_init()){
-	// 	/* xTaskCreate( */
-	// 	/* 		taskClient, */
-	// 	/* 		"taskClient", */
-	// 	/* 		8192,			// Stack Size */
-	// 	/* 		NULL,			// Parameters */
-	// 	/* 		1,				// Priority */
-	// 	/* 		NULL); */
-	// 	xTaskCreate(
-	// 		taskServer,
-	// 		"taskServer",
-	// 		4096,
-	// 		(void*)AF_INET,
-	// 		5,
-	// 		NULL
-	// 	);
-	// }
+	if (wifi_setup_init()){
+		/* xTaskCreate( */
+		/* 		taskClient, */
+		/* 		"taskClient", */
+		/* 		8192,			// Stack Size */
+		/* 		NULL,			// Parameters */
+		/* 		1,				// Priority */
+		/* 		NULL); */
+		xTaskCreate(
+			taskServer,
+			"taskServer",
+			4096,
+			(void*)AF_INET,
+			5,
+			NULL
+		);
+	}
 
 	vTaskDelay(pdMS_TO_TICKS(500));
-	move(90);
-
-	
 }
