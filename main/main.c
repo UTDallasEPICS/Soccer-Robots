@@ -56,19 +56,17 @@ typedef struct sockaddr SA;
 /* static const int ip_protocol = 0; */
 
 static uint8_t s_led_state = 0;
-static float currentDirection[2] = {0, 0};
 
 //setting up things we need for natural movement
 static int8_t xValForMotor = -50;
-static float changePerMs = 0;
 
 static int lowerReverseBound = 0;
 static int upperReverseBound = 0;
 static int lowerForwardBound = 0;
 
+static float currentDirection[2] = {0, 0};
 static int8_t currentTargets[2] = {0, 0};
-
-static float changePerLoop[2] = {0, 0};
+static float startTargets[2] = {0, 0};
 
 typedef struct {
     int8_t fullForward[2];
@@ -91,15 +89,35 @@ static MoveTargets moveTargets = {
     {0, 0}
 };
 
+float pwmFunction(int8_t x, float start, int8_t end)
+{
+	float a = abs(end - start);
+	float c = min(start, end)
+	float b = 2 * (end - start) / abs(end - start)
+	return a / (1 + e^(-b*x/20)) + c;
+}
+
 typedef struct {
-	bool forward, left, right, back;
+	bool forward, left, right, back, inputChanged;
 } Movement;
 
 Movement* getMovementStruct(char *buffer, int length)
 {
 	Movement *theStruct = malloc(sizeof(Movement)); // Allocate memory
     *theStruct = (Movement){false, false, false, false}; // Proper struct initialization
-	for(int i = 0; i < length; i++)
+	int i;
+	//if its true
+	if(buffer[0] == 't' && buffer[1] == 'r' && buffer[2] == 'u' && buffer[3] == 'e')
+	{
+		theStruct->inputChanged = true;
+		i = 4;
+	}
+	else
+	{
+		i = 5;
+		theStruct->inputChanged = false;
+	}
+	for(i; i < length; i++)
 	{
 		if(buffer[i] == 'u')
 			theStruct->forward = true;
@@ -132,57 +150,6 @@ static void doMovement(Movement *movementDirections)
 {
 	ESP_LOGI("DEBUG", "Direction Left is %f, Direction Right is %f, forward is %d, left is %d, right is %d, back is %d.", 
 		currentDirection[0], currentDirection[1], movementDirections->forward, movementDirections->left, movementDirections->right, movementDirections->back);
-	if(movementDirections->forward)
-	{
-		//Forward and turning lefft
-		if(movementDirections->left)
-		{
-
-		}
-		//Forward and turning right
-		else if(movementDirections->right)
-		{
-
-		}
-		//Full forward
-		else
-		{
-			
-		}
-	}
-	else if(movementDirections->back)
-	{
-		//Backward and (technically) turning to face right.
-		if(movementDirections->left)
-		{
-
-		}
-		//Backward and (technically) turning to face left.
-		else if(movementDirections->right)
-		{
-
-		}
-		//Full backward
-		else
-		{
-			
-		}
-	}
-	//Only turning left
-	else if(movementDirections->left)
-	{
-
-	}
-	//Only turning right
-	else if(movementDirections->right)
-	{
-
-	}
-	//target to no longer moving
-	else
-	{
-		
-	}
 	move();
 }
 
@@ -314,7 +281,7 @@ CLEAN_UP:
 //Raw Duty = (Percent/100) * (2^LEDC_DUTY_RES)
 
 //Gets the raw duty value from the percentage.
-int getRawDutyFromPercent(float duty){	
+float getRawDutyFromPercent(float duty){	
 	duty = duty / 100;	
 	return (pow(2, LEDC_DUTY_RES) * duty);
 }
@@ -322,6 +289,33 @@ int getRawDutyFromPercent(float duty){
 float getPercentFromRawDuty(float duty)
 {
 	return (duty*100)/(pow(2, LEDC_DUTY_RES));
+}
+
+float getRawDutyFromBaseDirection(float duty)
+{
+	//if duty is positive, remember valid values are from 86 - 100. If negative, from 36-50
+	uint8_t range = 14;
+	if(duty > 0.1)
+	{
+		uint8_t lowerBound = 86;
+		//works as we first limit it to the range 0 to 14 by dividing by (100/range).
+		duty = duty / (100.0 / range);
+		//Then, add 86 to put it in the range 86-100
+		duty += lowerBound;
+	}
+	else if(duty < 0.1)
+	{
+		uint8_t lowerBound = 36;
+		//first limit it to the range -14 to 0  by dividing by (100 / range)
+		duty = duty / (100.0 / range);
+		//Then, add 14 to it to put it in the range 0-14, then add 36 to put in range 36-50
+		duty += lowerBound + range;
+	}
+	else
+	{
+		duty = 0;
+	}
+	return getRawDutyFromPercent(duty);
 }
 
 //converts pulse width (in ms) to the proper duty cycle RAW.
@@ -380,13 +374,13 @@ static void ledc_setup(){
 
 void move(){
 	//Move the left motor
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromPercent(currentDirection[0])));
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromDirection(currentDirection[0])));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
 	ESP_LOGI("DUTY CHECK", "Left Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL1));
 
 
 	//Move the right motor
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromPercent(currentDirection[1])));
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromDirection(currentDirection[1])));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
 
 	ESP_LOGI("DUTY CHECK", "Right Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
