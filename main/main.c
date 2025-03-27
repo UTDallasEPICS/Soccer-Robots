@@ -50,18 +50,46 @@
 
 // Prototypes
 static void setup();
-void move(int);
+void move();
 
 typedef struct sockaddr SA;
 /* static const int ip_protocol = 0; */
 
 static uint8_t s_led_state = 0;
-static float directionLeft = 0;
-static float directionRight = 0;
+static float currentDirection[2] = {0, 0};
+
+//setting up things we need for natural movement
+static int8_t xValForMotor = -50;
+static float changePerMs = 0;
 
 static int lowerReverseBound = 0;
 static int upperReverseBound = 0;
 static int lowerForwardBound = 0;
+
+static int8_t currentTargets[2] = {0, 0};
+
+static float changePerLoop[2] = {0, 0};
+
+typedef struct {
+    int8_t fullForward[2];
+    int8_t fullBack[2];
+    int8_t forwardLeft[2];
+    int8_t forwardRight[2];
+    int8_t fullLeft[2];
+    int8_t fullRight[2];
+    int8_t stop[2];
+} MoveTargets;
+
+// Initialize the struct after declaration
+static MoveTargets moveTargets = {
+    {85, 85},
+    {-85, -85},
+    {35, 100},
+    {100, 35},
+    {-50, 50},
+    {50, -50},
+    {0, 0}
+};
 
 typedef struct {
 	bool forward, left, right, back;
@@ -84,10 +112,10 @@ Movement* getMovementStruct(char *buffer, int length)
 	}
 
 	//If pressing both, set them both to false.
-	if(theStruct->forward == true && theStruct->backward == true)
+	if(theStruct->forward == true && theStruct->back == true)
 	{
 		theStruct->forward = false;
-		theStruct->backward = false;
+		theStruct->back = false;
 	}
 	
 	//If pressing both, set them both to false.
@@ -102,7 +130,8 @@ Movement* getMovementStruct(char *buffer, int length)
 
 static void doMovement(Movement *movementDirections)
 {
-	ESP_LOGI("DEBUG", "Direction is %d, forward is %d, left is %d, right is %d, back is %d, ", direction_test, movementDirections->forward, movementDirections->left, movementDirections->right, movementDirections->back);
+	ESP_LOGI("DEBUG", "Direction Left is %f, Direction Right is %f, forward is %d, left is %d, right is %d, back is %d.", 
+		currentDirection[0], currentDirection[1], movementDirections->forward, movementDirections->left, movementDirections->right, movementDirections->back);
 	if(movementDirections->forward)
 	{
 		//Forward and turning lefft
@@ -336,7 +365,7 @@ static void ledc_setup(){
 	};
 	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf1));
 
-	Channel Configuration
+	//Channel Configuration
 	ledc_channel_config_t channel_conf2 = {
 		.speed_mode = LEDC_MODE,
 		.channel = LEDC_CHANNEL2,
@@ -351,13 +380,13 @@ static void ledc_setup(){
 
 void move(){
 	//Move the left motor
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromPercent(directionLeft)));
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromPercent(currentDirection[0])));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
 	ESP_LOGI("DUTY CHECK", "Left Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL1));
 
 
 	//Move the right motor
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromPercent(directionRight)));
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromPercent(currentDirection[1])));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
 
 	ESP_LOGI("DUTY CHECK", "Right Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));

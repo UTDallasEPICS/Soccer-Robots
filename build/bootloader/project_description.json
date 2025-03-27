@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "bootloader",
-    "project_version":    "v5.4",
+    "project_version":    "v5.4-dirty",
     "project_path":       "C:/Users/mahd/esp/v5.4/esp-idf/components/bootloader/subproject",
     "idf_path":           "C:/Users/mahd/esp/v5.4/esp-idf",
     "build_dir":          "C:/Users/mahd/Documents/SoccerRobotsESP32/build/bootloader",
@@ -11,7 +11,7 @@
     "app_elf":            "bootloader.elf",
     "app_bin":            "bootloader.bin",
     "build_type":         "flash_app",
-    "git_revision":       "v5.4",
+    "git_revision":       "v5.4-dirty",
     "target":             "esp32s2",
     "rev":                "",
     "min_rev":            "0",
