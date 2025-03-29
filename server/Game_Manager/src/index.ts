@@ -74,6 +74,7 @@ const gameCycle = setInterval( async () => {
                 confirmation_timer = confirmation_timer_duration
             }
             else{ // ask if robots are ready to play. If so it sends a message "IS_READY", handled at the end of the fil
+                console.log("asking if ready")
                 ws_raspberry.send(JSON.stringify({
                     "type": "CHECK_READY",
                     "payload": ""
