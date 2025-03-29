@@ -25,3 +25,4 @@ logs
 
 # a folder I have for backups
 .history/
+/.history
