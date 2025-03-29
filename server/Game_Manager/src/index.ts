@@ -15,6 +15,7 @@ const prisma = new PrismaClient()
 
 // Environment variables
 dotenv.config({ path: "./.env" })
+const PI_ADDR : string = process.env.PI_ADDR
 const LOCALHOST: string = process.env.LOCALHOST ?? "localhost"
 const PORT_SSE_GM: number = parseInt(`${process.env.PORT_SSE_GM}`)
 const PORT_GM_RASPBERRY: number = parseInt(`${process.env.PORT_GM_RASPBERRY}`)
@@ -545,10 +546,10 @@ const broadcastScore = setInterval(() => {
 
 // SECTION: WEBSOCKET GAME MANAGER <-> RASPBERRY
 // Make sure to set up Raspberry server first
-const ws_raspberry = new WebSocket(`ws://localhost:${PORT_GM_RASPBERRY}`)
+const ws_raspberry = new WebSocket(`ws://${PI_ADDR}:${PORT_GM_RASPBERRY}`)
 
 ws_raspberry.onopen = (event) => {
-    console.log(`WS_RASPBERRY CONNECTED ws://localhost:${PORT_GM_RASPBERRY}`)
+    console.log(`WS_RASPBERRY CONNECTED ws://${PI_ADDR}:${PORT_GM_RASPBERRY}`)
 }
 
 ws_raspberry.onerror = (error) => {

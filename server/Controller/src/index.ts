@@ -15,6 +15,7 @@ interface JwtPayloadWithRole extends jwt.JwtPayload {
 // Environment variables
 dotenv.config({ path: "./.env" })
 const LOCALHOST: string = process.env.LOCALHOST ?? "localhost"
+const PI_ADDR : string = process.env.PI_ADDR
 const PORT_SERVER: number = parseInt(`${process.env.PORT_EXPRESS_CONTROLLER_GAMEMANAGER}`)
 const PORT_WSS_CLIENT: number = parseInt(`${process.env.PORT_WSS_CONTROLLER_CLIENT}`)
 const PORT_WSS_RASPBERRY: number = parseInt(`${process.env.PORT_WSS_CONTROLLER_RASPBERRY}`)
@@ -34,14 +35,16 @@ const printCurrentUsers = () => {
 
 // WEBSOCKET RASPBERRY
 // Make sure to set up Raspberry server first
-const ws_raspberry = new WebSocket(`ws://localhost:${PORT_WSS_RASPBERRY}`)
+
+// const ws_raspberry = new WebSocket(`ws://localhost:${PORT_WSS_RASPBERRY}`)
+const ws_raspberry = new WebSocket(`ws://${PI_ADDR}:${PORT_WSS_RASPBERRY}`)
 
 ws_raspberry.onopen = (event) => {
-    console.log(`WS_RASPBERRY CONNECTED ws://localhost:${PORT_WSS_RASPBERRY}`)
+    console.log(`WS_RASPBERRY CONNECTED ws://${PI_ADDR}:${PORT_WSS_RASPBERRY}`)
 }
 
 ws_raspberry.onerror = (error) => {
-    console.log("WS_RASPBERRY error: " + error.message)
+    console.log("WS_RASPBERRY error: " + error.message) 
     console.error(error)
 }
 ws_raspberry.onclose = (event) => {
