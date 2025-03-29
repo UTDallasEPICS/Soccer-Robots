@@ -13,6 +13,7 @@ class Client:
             print(f"Connected to {self.host}:{self.port}")
         except socket.error:
             print(f"Error connecting to {self.host}:{self.port}")
+            print(socket.error)
             return
 
     def send(self, msg):

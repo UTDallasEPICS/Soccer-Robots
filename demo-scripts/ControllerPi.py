@@ -1,0 +1,38 @@
+import asyncio
+import websockets
+import json
+import time
+#from NewServer import getTime()
+
+# If packet is published properly print to screen
+def on_publish(client, userdata, mid):
+    print("Published to esp32")
+
+#HOST = 'localhost'
+HOST = '10.42.0.1'
+PORT = 1235
+
+async def serverCM(websocket, path):
+    print("inside CM")
+
+    while True:
+        received_data = await websocket.recv()
+        received = json.loads(received_data)
+        if received["type"] == "KEY_INPUT":
+            if received["payload"]["playernumber"] == 0:
+                if received["payload"]["keys"] != "0000":
+                    print("Player One Moved")
+                    currInput = int(received["payload"]["keys"], 2)
+                    print("Player One Input (decimal): " + str(currInput))
+                    print("Player One Input (bits): " + received["payload"]["keys"])
+            if received["payload"]["playernumber"] == 1:
+                if received["payload"]["keys"] != "0000":
+                    print("Player Two Moved")
+                    currInput = int(received["payload"]["keys"], 2)
+                    print("Player Two Input (decimal): " + str(currInput))
+                    print("Player Two Input (bits): " + received["payload"]["keys"])
+
+start_server = websockets.serve(serverCM, HOST, PORT)
+print("\nSTARTED CM SERVER")
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()

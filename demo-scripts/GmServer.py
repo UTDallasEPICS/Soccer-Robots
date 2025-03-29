@@ -5,7 +5,7 @@ import time
 from backupTag import runTrakcer
 
 #HOST = 'localhost'
-HOST = '192.168.137.195' 
+HOST = '10.42.0.1'
 PORT = 1234
 
 game_time = 0
