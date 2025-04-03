@@ -37,7 +37,7 @@
 #define BLINK_PERIOD 1000
 
 #define LEDC_MODE               LEDC_LOW_SPEED_MODE
-#define LEDC_DUTY_RES           LEDC_TIMER_10_BIT // Set duty resolution to 13 bits
+#define LEDC_DUTY_RES           LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
 #define LEDC_TIMER				LEDC_TIMER_0
 #define LEDC_FREQUENCY  454 // Frequency in Hertz. Set frequency at 4 kHz
 
@@ -70,9 +70,9 @@ typedef struct sockaddr SA;
 
 static uint8_t s_led_state = 0;
 
-static int lowerReverseBound = 0;
-static int upperReverseBound = 0;
-static int lowerForwardBound = 0;
+static uint8_t lowerReverseBound = 0;
+static uint8_t upperReverseBound = 0;
+static uint8_t lowerForwardBound = 0;
 
 static float currentDirection[2] = {0, 0};
 static int8_t currentTargets[2] = {0, 0};
@@ -244,7 +244,7 @@ static void doMovement(Movement *movementDirections)
 	}
 	currentDirection[0] = pwmFunction(0, x);
 	currentDirection[1] = pwmFunction(1, x);
-	move(x);
+	move();
 }
 
 static void on_receive(const int sock)
@@ -374,9 +374,9 @@ CLEAN_UP:
 
 //Raw Duty = (Percent/100) * (2^LEDC_DUTY_RES)
 
-//Gets the raw duty value from the percentage.
+//Gets the raw duty value from the percentage from 0 to 100
 float getRawDutyFromPercent(float duty){	
-	duty = duty / 100;	
+	duty /= 100;	
 	return (pow(2, LEDC_DUTY_RES) * duty);
 }
 
@@ -388,22 +388,20 @@ float getPercentFromRawDuty(float duty)
 float getRawDutyFromBaseDirection(float duty)
 {
 	//if duty is positive, remember valid values are from 86 - 100. If negative, from 36-50
-	uint8_t range = 14;
+	uint8_t range = upperReverseBound - lowerReverseBound;
 	if(duty > 0.1)
 	{
-		uint8_t lowerBound = 86;
 		//works as we first limit it to the range 0 to 14 by dividing by (100/range).
 		duty = duty / (100.0 / range);
 		//Then, add 86 to put it in the range 86-100
-		duty += lowerBound;
+		duty += lowerForwardBound;
 	}
-	else if(duty < 0.1)
+	else if(duty < -0.1)
 	{
-		uint8_t lowerBound = 36;
 		//first limit it to the range -14 to 0  by dividing by (100 / range)
 		duty = duty / (100.0 / range);
 		//Then, add 14 to it to put it in the range 0-14, then add 36 to put in range 36-50
-		duty += lowerBound + range;
+		duty += lowerReverseBound + range;
 	}
 	else
 	{
@@ -413,17 +411,10 @@ float getRawDutyFromBaseDirection(float duty)
 }
 
 //converts pulse width (in ms) to the proper duty cycle RAW.
-int convertPulseWidthToPercentDuty(int pulseWidth, bool lowerBound)
+float convertPulseWidthToPercentDuty(int pulseWidth)
 {
-	//pulse width / 1000 = duty cycle * period. Cause pulse width initially in milliseconds.
-	//so duty cycle = x, period = 1/freq, so pulseWidth/1000 = x/freq --> x = freq * pulseWidth/1000
-	float rawDuty = pulseWidth / (1000.0) * LEDC_FREQUENCY;
-	float trueDutyCycle = getPercentFromRawDuty(rawDuty);
-	//Now, we need the percentage.
-
-	if(lowerBound)
-		return floor(trueDutyCycle);
-	return ceil(trueDutyCycle);
+	//get it with pulse width over period. Convert from microseconds to seconds too.
+	return pulseWidth/(pow(10, 6)/LEDC_FREQUENCY) * 100;
 }
 
 static void ledc_setup(){
@@ -466,16 +457,14 @@ static void ledc_setup(){
 	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf2));
 }
 
-void move(uint64_t x){
+void move(){
 	//Move the left motor
 	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromBaseDirection(currentDirection[0])));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
-	//ESP_LOGI("DUTY CHECK", "Left Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL1));
-
 
 	//Move the right motor
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromBaseDirection(currentDirection[1])));
-	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
+	// ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromBaseDirection(currentDirection[1])));
+	// ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
 
 	//("DUTY CHECK", "Right Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
 
@@ -483,11 +472,11 @@ void move(uint64_t x){
 	// Pulse of : 1900 - 2200 uS (Forward)
 
 	// Frequency of 454 Hz = Period of 2202 uS
-	// 800 uS = 36
+	// 793 uS = 36
 	// 1100 uS = 50
 	//
-	// 1900 uS = 86
-	// 2200 uS = 100
+	// 1894 uS = 86
+	// 2202 uS = 100
 }
 
 void doBlink()
@@ -501,14 +490,24 @@ void doBlink()
 void app_main() {
 	timer_init(TIMER_GROUP_0, TIMER_0, &config);
 	//THESE ARE THE RAW DUTIES
-	lowerReverseBound = convertPulseWidthToPercentDuty(800, true);
-	upperReverseBound = convertPulseWidthToPercentDuty(1100, false);
-	lowerForwardBound = convertPulseWidthToPercentDuty(1900, true);
+	lowerReverseBound = floor(convertPulseWidthToPercentDuty(800));
+	upperReverseBound = ceil(convertPulseWidthToPercentDuty(1100));
+	lowerForwardBound = floor(convertPulseWidthToPercentDuty(1900));
 	ESP_LOGI("BOUNDS", "Lower bound to reverse motor: %d, upper bound to reverse motor: %d, lower bound to push motor forward: %d", lowerReverseBound, upperReverseBound, lowerForwardBound);
-	
+
 	ledc_setup();
 	
 	doBlink();
+
+	while(true)
+	{
+		for(int i = -100; i <= 100; i++)
+		{
+			currentDirection[0] = i;	
+			move();
+			vTaskDelay(pdMS_TO_TICKS(10));
+		}
+	}
 
 	if (wifi_setup_init()){
 		/* xTaskCreate( */
