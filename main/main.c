@@ -78,6 +78,8 @@ static float currentDirection[2] = {0, 0};
 static int8_t currentTargets[2] = {0, 0};
 static float startTargets[2] = {0, 0};
 
+static bool newData = false;
+
 typedef struct {
     int8_t fullForward[2];
     int8_t fullBack[2];
@@ -123,138 +125,139 @@ float pwmFunction(uint8_t index, uint64_t x)
 }
 
 typedef struct {
-	bool forward, left, right, back, inputChanged;
+	bool forward, left, right, back;
 } Movement;
 
-Movement* getMovementStruct(char *buffer, int length)
+static Movement *moveStruct;
+
+
+void setMoveStruct(char *buffer, int length)
 {
-	Movement *theStruct = malloc(sizeof(Movement)); // Allocate memory
-    *theStruct = (Movement){false, false, false, false, true}; // Proper struct initialization
-	//if its true
+	//resetting the struct.
+	moveStruct->forward = false;
+	moveStruct->back = false;
+	moveStruct->left = false;
+	moveStruct->right = false;
+
+	//now loop through buffer, if seeing the right keys, det it to true
 	for(int i = 0; i < length; i++)
 	{
 		if(buffer[i] == 'u')
-			theStruct->forward = true;
+			moveStruct->forward = true;
 		if(buffer[i] == 'd')
-			theStruct->back = true;
+			moveStruct->back = true;
 		if(buffer[i] == 'l')
-			theStruct->left  = true;
+			moveStruct->left  = true;
 		if(buffer[i] == 'r')
-			theStruct->right = true;
-	}
-
-	if(theStruct->forward == false && theStruct-> back == false && theStruct->left == false && theStruct->right == false)
-	{
-		theStruct->inputChanged = false;
+			moveStruct->right = true;
 	}
 
 	//If pressing both, set them both to false.
-	if(theStruct->forward == true && theStruct->back == true)
+	if(moveStruct->forward == true && moveStruct->back == true)
 	{
-		theStruct->forward = false;
-		theStruct->back = false;
+		moveStruct->forward = false;
+		moveStruct->back = false;
 	}
 	
 	//If pressing both, set them both to false.
-	if(theStruct->left == true && theStruct->right == true)
+	if(moveStruct->left == true && moveStruct->right == true)
 	{
-		theStruct->left = false;
-		theStruct->right = false;
+		moveStruct->left = false;
+		moveStruct->right = false;
 	}
-
-	return theStruct;
 }
 
-static void doMovement(Movement *movementDirections)
+void doMovement(void *pvParameters)
 {
-	uint64_t x = 0;
-	timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &x);
-	if(movementDirections->inputChanged)
+	while(true)
 	{
+		uint64_t x = 0;
+		timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &x);
 		ESP_LOGI("DEBUG", "Direction Left is %f, Direction Right is %f, forward is %d, left is %d, right is %d, back is %d, x is %llu.", 
-			currentDirection[0], currentDirection[1], movementDirections->forward, movementDirections->left, movementDirections->right, movementDirections->back, x);	
-	}
-	
-	if(!movementDirections->inputChanged)
-	{
-		if(x >= 500)
+			currentDirection[0], currentDirection[1], moveStruct->forward, moveStruct->left, moveStruct->right, moveStruct->back, x);	
+		
+		if(!newData)
 		{
-			timer_pause(TIMER_GROUP_0, TIMER_0);
-			timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 500);
-			return;
-		}
-	}
-	else
-	{
-		startTargets[0] = currentDirection[0];
-		startTargets[1] = currentDirection[1];
-		timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
-		timer_start(TIMER_GROUP_0, TIMER_0);
-		//get final targets here
-		if(movementDirections->forward)
-		{
-			//forwared left
-			if(movementDirections->left)
+			if(x >= 500)
 			{
-				currentTargets[0] = moveTargets.forwardLeft[0];
-				currentTargets[1] = moveTargets.forwardLeft[1];
-			}
-			//forward and right
-			else if(movementDirections->right)
-			{
-				currentTargets[0] = moveTargets.forwardRight[0];
-				currentTargets[1] = moveTargets.forwardRight[1];
-			}
-			//full forward
-			else
-			{
-				currentTargets[0] = moveTargets.fullForward[0];
-				currentTargets[1] = moveTargets.fullForward[1];
+				timer_pause(TIMER_GROUP_0, TIMER_0);
+				timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 500);
+				continue;
 			}
 		}
-		else if(movementDirections->back)
-		{
-			//back and pressing left
-			if(movementDirections->left)
-			{
-				currentTargets[0] = moveTargets.backLeft[0];
-				currentTargets[1] = moveTargets.backLeft[1];
-			}
-			//back and pressing right
-			else if(movementDirections->right)
-			{
-				currentTargets[0] = moveTargets.backRight[0];
-				currentTargets[1] = moveTargets.backRight[1];
-			}
-			//full force backward
-			else
-			{
-				currentTargets[0] = moveTargets.fullBack[0];
-				currentTargets[1] = moveTargets.fullBack[1];
-			}
-		}
-		//only going left, as we know forward and back aren't presssed
-		else if(movementDirections->left)
-		{
-			currentTargets[0] = moveTargets.fullLeft[0];
-			currentTargets[1] = moveTargets.fullLeft[1];
-		}
-		//only going right, as we know forward and back aren't pressed
-		else if(movementDirections->right)
-		{
-			currentTargets[0] = moveTargets.fullRight[0];
-			currentTargets[1] = moveTargets.fullRight[1];
-		}
-		//otherwise nothing is pressed, want to go back to being stationary.
 		else
 		{
-			currentTargets[0] = moveTargets.stop[0];
-			currentTargets[1] = moveTargets.stop[1];
+			newData = false;
+			startTargets[0] = currentDirection[0];
+			startTargets[1] = currentDirection[1];
+			timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
+			timer_start(TIMER_GROUP_0, TIMER_0);
+			//get final targets here
+			if(moveStruct->forward)
+			{
+				//forwared left
+				if(moveStruct->left)
+				{
+					currentTargets[0] = moveTargets.forwardLeft[0];
+					currentTargets[1] = moveTargets.forwardLeft[1];
+				}
+				//forward and right
+				else if(moveStruct->right)
+				{
+					currentTargets[0] = moveTargets.forwardRight[0];
+					currentTargets[1] = moveTargets.forwardRight[1];
+				}
+				//full forward
+				else
+				{
+					currentTargets[0] = moveTargets.fullForward[0];
+					currentTargets[1] = moveTargets.fullForward[1];
+				}
+			}
+			else if(moveStruct->back)
+			{
+				//back and pressing left
+				if(moveStruct->left)
+				{
+					currentTargets[0] = moveTargets.backLeft[0];
+					currentTargets[1] = moveTargets.backLeft[1];
+				}
+				//back and pressing right
+				else if(moveStruct->right)
+				{
+					currentTargets[0] = moveTargets.backRight[0];
+					currentTargets[1] = moveTargets.backRight[1];
+				}
+				//full force backward
+				else
+				{
+					currentTargets[0] = moveTargets.fullBack[0];
+					currentTargets[1] = moveTargets.fullBack[1];
+				}
+			}
+			//only going left, as we know forward and back aren't presssed
+			else if(moveStruct->left)
+			{
+				currentTargets[0] = moveTargets.fullLeft[0];
+				currentTargets[1] = moveTargets.fullLeft[1];
+			}
+			//only going right, as we know forward and back aren't pressed
+			else if(moveStruct->right)
+			{
+				currentTargets[0] = moveTargets.fullRight[0];
+				currentTargets[1] = moveTargets.fullRight[1];
+			}
+			//otherwise nothing is pressed, want to go back to being stationary.
+			else
+			{
+				currentTargets[0] = moveTargets.stop[0];
+				currentTargets[1] = moveTargets.stop[1];
+			}
 		}
+		currentDirection[0] = pwmFunction(0, x);
+		currentDirection[1] = pwmFunction(1, x);
+		move();	
 	}
-	currentDirection[0] = pwmFunction(0, x);
-	currentDirection[1] = pwmFunction(1, x);
-	move();
 }
 
 static void on_receive(const int sock)
@@ -274,8 +277,8 @@ static void on_receive(const int sock)
             rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
             //ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
 
-			doMovement(getMovementStruct(rx_buffer, len));
-			
+			setMoveStruct(rx_buffer, len);
+			newData = true;
             // send() can return less bytes than supplied length.
             // Walk-around for robust implementation.
             int to_write = len;
@@ -340,6 +343,7 @@ void taskServer(void *pvParameters){
         goto CLEAN_UP;
     }
 
+	TaskHandle_t doMovementHandle = NULL;
     while (1) 
 	{
         ESP_LOGI(TAG, "Socket listening");
@@ -368,12 +372,19 @@ void taskServer(void *pvParameters){
             inet_ntoa_r(((struct sockaddr_in *)&source_addr)->sin_addr, addr_str, sizeof(addr_str) - 1);
         }
         ESP_LOGI(TAG, "Socket accepted ip address: %s", addr_str);
+		//create task to do movement
+		xTaskCreate(doMovement, "doMovement", 8192, NULL, 4, &doMovementHandle);
 
 		// Respond to client
         on_receive(sock);
 
 		// Close client socket
         shutdown(sock, 0);
+
+		//delete the movement task since socket disconnected
+		vTaskDelete(doMovementHandle);
+		doMovementHandle = NULL;
+
         close(sock);
     }
 
@@ -498,6 +509,9 @@ void doBlink()
 }
 
 void app_main() {
+	moveStruct = malloc(sizeof(Movement));
+	*moveStruct = (Movement) {false, false, false, false};
+	
 	timer_init(TIMER_GROUP_0, TIMER_0, &config);
 	//THESE ARE THE RAW DUTIES
 	lowerReverseBound = floor(convertPulseWidthToPercentDuty(800));
@@ -518,6 +532,7 @@ void app_main() {
 	// 		vTaskDelay(pdMS_TO_TICKS(10));
 	// 	}
 	// }
+
 	vTaskDelay(pdMS_TO_TICKS(3000));
 	if (wifi_setup_init()){
 		/* xTaskCreate( */
@@ -526,15 +541,9 @@ void app_main() {
 		/* 		8192,			// Stack Size */
 		/* 		NULL,			// Parameters */
 		/* 		1,				// Priority */
-		/* 		NULL); */
-		xTaskCreate(
-			taskServer,
-			"taskServer",
-			4096,
-			(void*)AF_INET,
-			5,
-			NULL
-		);
+		/* 		NULL //handle to delete task
+		); */
+		xTaskCreate(taskServer, "taskServer", 4096, (void*)AF_INET, 5, NULL);
 	}
 
 	vTaskDelay(pdMS_TO_TICKS(500));
