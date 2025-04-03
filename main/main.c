@@ -186,7 +186,7 @@ void doMovement(void *pvParameters)
 			{
 				timer_pause(TIMER_GROUP_0, TIMER_0);
 				timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 1000);
-				xSemaphoreTake(xSemaphore);
+				xSemaphoreTake(xSemaphore, portMAX_DELAY);
 				continue;
 			}
 		}
