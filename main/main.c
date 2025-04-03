@@ -103,13 +103,23 @@ static MoveTargets moveTargets = {
     {0, 0}
 };
 
+//got a function from desmos, we are just plugging it in
 float pwmFunction(uint8_t index, uint64_t x)
 {
-	uint32_t x1 = x - 250;
+	int32_t x1 = x - 250;
 	float a = fabs(currentTargets[index] - startTargets[index]);
 	float c = fmin(startTargets[index], currentTargets[index]);
-	float b = (1/2.5) * (currentTargets[index] - startTargets[index]) / fabs(currentTargets[index] - startTargets[index]);
-	return a / (1 + exp(-b*x1/20)) + c;
+	float b;
+	if(currentTargets[index] == startTargets[index])
+	{
+		b = 0;
+	}
+	else
+	{
+		b = (1/2.5) * (currentTargets[index] - startTargets[index]) / fabs(currentTargets[index] - startTargets[index]);
+	}
+	float returnVal = a / (1 + exp(-b*x1/20)) + c;
+	return returnVal;
 }
 
 typedef struct {
@@ -463,8 +473,8 @@ void move(){
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
 
 	//Move the right motor
-	// ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromBaseDirection(currentDirection[1])));
-	// ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromBaseDirection(currentDirection[1])));
+	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
 
 	//("DUTY CHECK", "Right Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
 
@@ -499,16 +509,16 @@ void app_main() {
 	
 	doBlink();
 
-	while(true)
-	{
-		for(int i = -100; i <= 100; i++)
-		{
-			currentDirection[0] = i;	
-			move();
-			vTaskDelay(pdMS_TO_TICKS(10));
-		}
-	}
-
+	// while(true)
+	// {
+	// 	for(int i = -100; i <= 100; i++)
+	// 	{
+	// 		currentDirection[0] = i;	
+	// 		move();
+	// 		vTaskDelay(pdMS_TO_TICKS(10));
+	// 	}
+	// }
+	vTaskDelay(pdMS_TO_TICKS(3000));
 	if (wifi_setup_init()){
 		/* xTaskCreate( */
 		/* 		taskClient, */
