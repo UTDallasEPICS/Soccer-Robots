@@ -27,6 +27,7 @@
 #include <string.h>
 #include "driver/timer.h"
 #include <fcntl.h>
+#include "freertos/semphr.h"
 
 #define PORT					30000
 #define KEEPALIVE_IDLE			CONFIG_KEEPALIVE_IDLE
@@ -53,7 +54,8 @@
 static timer_config_t config = {
     .alarm_en = TIMER_ALARM_DIS,        // don’t need alarm
     .auto_reload = false,               // Auto-reload timer. Don’t want this
-    .divider = 80,                     // Timer clock divider (80000 gives a 1 millisecond resolution. As divider = APB clock frequency / ticks per second. Frequency is 80 MHz, so 80Mhz/1000 means 80000 total )
+	//currently, we are going to update the timer every half a millisecond, so we'll need to account for this.
+    .divider = 40000,                     // Timer clock divider (80000 gives a 1 millisecond resolution. As divider = APB clock frequency / ticks per second. Frequency is 80 MHz, so 80Mhz/1000 means 80000 total )
     .counter_dir = TIMER_COUNT_UP,     // Count upwards
     .counter_en = false,         // Start the timer
     .intr_type = TIMER_INTR_LEVEL,     // Interrupt type
@@ -79,6 +81,7 @@ static int8_t currentTargets[2] = {0, 0};
 static float startTargets[2] = {0, 0};
 
 static bool newData = false;
+SemaphoreHandle_t xSemaphore;
 
 typedef struct {
     int8_t fullForward[2];
@@ -106,9 +109,8 @@ static MoveTargets moveTargets = {
 };
 
 //got a function from desmos, we are just plugging it in
-float pwmFunction(uint8_t index, uint64_t x)
+float pwmFunction(uint8_t index, int16_t x)
 {
-	int32_t x1 = x - 250;
 	float a = fabs(currentTargets[index] - startTargets[index]);
 	float c = fmin(startTargets[index], currentTargets[index]);
 	float b;
@@ -120,7 +122,7 @@ float pwmFunction(uint8_t index, uint64_t x)
 	{
 		b = (1/2.5) * (currentTargets[index] - startTargets[index]) / fabs(currentTargets[index] - startTargets[index]);
 	}
-	float returnVal = a / (1 + exp(-b*x1/20)) + c;
+	float returnVal = a / (1 + exp(-b*x/20)) + c;
 	return returnVal;
 }
 
@@ -173,15 +175,18 @@ void doMovement(void *pvParameters)
 	{
 		uint64_t x = 0;
 		timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &x);
+		//we'll need to do x / 2 - 250 for two reasons. First, we divide by 2 because the timer increments every half a millisecond, so its value
+		//is double what we need. Also, it only allows positive values, so we have to make it from 0-500 and then subtract by 250 to get -250 to 250.
 		ESP_LOGI("DEBUG", "Direction Left is %f, Direction Right is %f, forward is %d, left is %d, right is %d, back is %d, x is %llu.", 
-			currentDirection[0], currentDirection[1], moveStruct->forward, moveStruct->left, moveStruct->right, moveStruct->back, x);	
+			currentDirection[0], currentDirection[1], moveStruct->forward, moveStruct->left, moveStruct->right, moveStruct->back, x/2 - 250);	
 		
 		if(!newData)
 		{
-			if(x >= 500)
+			if(x >= 1000)
 			{
 				timer_pause(TIMER_GROUP_0, TIMER_0);
-				timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 500);
+				timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 1000);
+				xSemaphoreTake(xSemaphore);
 				continue;
 			}
 		}
@@ -254,8 +259,8 @@ void doMovement(void *pvParameters)
 				currentTargets[1] = moveTargets.stop[1];
 			}
 		}
-		currentDirection[0] = pwmFunction(0, x);
-		currentDirection[1] = pwmFunction(1, x);
+		currentDirection[0] = pwmFunction(0, (int16_t) (x/2 - 250));
+		currentDirection[1] = pwmFunction(1, (int16_t) (x/2 - 250));
 		move();	
 	}
 }
@@ -279,6 +284,8 @@ static void on_receive(const int sock)
 
 			setMoveStruct(rx_buffer, len);
 			newData = true;
+			xSemaphoreGive(xSemaphore);
+
             // send() can return less bytes than supplied length.
             // Walk-around for robust implementation.
             int to_write = len;
@@ -511,6 +518,7 @@ void doBlink()
 void app_main() {
 	moveStruct = malloc(sizeof(Movement));
 	*moveStruct = (Movement) {false, false, false, false};
+	xSemaphore = xSemaphoreCreateBinary();
 	
 	timer_init(TIMER_GROUP_0, TIMER_0, &config);
 	//THESE ARE THE RAW DUTIES
