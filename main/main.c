@@ -80,8 +80,7 @@ static float currentDirection[2] = {0, 0};
 static int8_t currentTargets[2] = {0, 0};
 static float startTargets[2] = {0, 0};
 
-static bool newData = false;
-SemaphoreHandle_t xSemaphore;
+SemaphoreHandle_t waitForData;
 
 typedef struct {
     int8_t fullForward[2];
@@ -169,99 +168,107 @@ void setMoveStruct(char *buffer, int length)
 	}
 }
 
+void beginMoving()
+{
+	startTargets[0] = currentDirection[0];
+	startTargets[1] = currentDirection[1];
+	timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
+	timer_start(TIMER_GROUP_0, TIMER_0);
+	//get final targets here
+	if(moveStruct->forward)
+	{
+		//forwared left
+		if(moveStruct->left)
+		{
+			currentTargets[0] = moveTargets.forwardLeft[0];
+			currentTargets[1] = moveTargets.forwardLeft[1];
+		}
+		//forward and right
+		else if(moveStruct->right)
+		{
+			currentTargets[0] = moveTargets.forwardRight[0];
+			currentTargets[1] = moveTargets.forwardRight[1];
+		}
+		//full forward
+		else
+		{
+			currentTargets[0] = moveTargets.fullForward[0];
+			currentTargets[1] = moveTargets.fullForward[1];
+		}
+	}
+	else if(moveStruct->back)
+	{
+		//back and pressing left
+		if(moveStruct->left)
+		{
+			currentTargets[0] = moveTargets.backLeft[0];
+			currentTargets[1] = moveTargets.backLeft[1];
+		}
+		//back and pressing right
+		else if(moveStruct->right)
+		{
+			currentTargets[0] = moveTargets.backRight[0];
+			currentTargets[1] = moveTargets.backRight[1];
+		}
+		//full force backward
+		else
+		{
+			currentTargets[0] = moveTargets.fullBack[0];
+			currentTargets[1] = moveTargets.fullBack[1];
+		}
+	}
+	//only going left, as we know forward and back aren't presssed
+	else if(moveStruct->left)
+	{
+		currentTargets[0] = moveTargets.fullLeft[0];
+		currentTargets[1] = moveTargets.fullLeft[1];
+	}
+	//only going right, as we know forward and back aren't pressed
+	else if(moveStruct->right)
+	{
+		currentTargets[0] = moveTargets.fullRight[0];
+		currentTargets[1] = moveTargets.fullRight[1];
+	}
+	//otherwise nothing is pressed, want to go back to being stationary.
+	else
+	{
+		currentTargets[0] = moveTargets.stop[0];
+		currentTargets[1] = moveTargets.stop[1];
+	}
+}
+
 void doMovement(void *pvParameters)
 {
+	//always running while connected
 	while(true)
 	{
-		uint64_t x = 0;
-		timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &x);
-		//we'll need to do x / 2 - 250 for two reasons. First, we divide by 2 because the timer increments every half a millisecond, so its value
-		//is double what we need. Also, it only allows positive values, so we have to make it from 0-500 and then subtract by 250 to get -250 to 250.
-		ESP_LOGI("DEBUG", "Direction Left is %f, Direction Right is %f, forward is %d, left is %d, right is %d, back is %d, x is %llu.", 
-			currentDirection[0], currentDirection[1], moveStruct->forward, moveStruct->left, moveStruct->right, moveStruct->back, x/2 - 250);	
-		
-		if(!newData)
+		//assume when we start, we begin moving
+		beginMoving();
+		//this is the look to move the new target
+		while(true)
 		{
+			uint64_t x = 0;
+			timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &x);
+			//we'll need to do x / 2 - 250 for two reasons. First, we divide by 2 because the timer increments every half a millisecond, so its value
+			//is double what we need. Also, it only allows positive values, so we have to make it from 0-500 and then subtract by 250 to get -250 to 250.
+			ESP_LOGI("DEBUG", "Direction Left is %f, Direction Right is %f, forward is %d, left is %d, right is %d, back is %d, x is %d.", 
+				currentDirection[0], currentDirection[1], moveStruct->forward, moveStruct->left, moveStruct->right, moveStruct->back, (int16_t) (x/2 - 250));	
+	
+			//once we reach our limit, we break out of our movement loop and wait
 			if(x >= 1000)
 			{
 				timer_pause(TIMER_GROUP_0, TIMER_0);
 				timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 1000);
-				xSemaphoreTake(xSemaphore, portMAX_DELAY);
-				continue;
+				break;
 			}
+
+			//otherwise, keep updating
+			currentDirection[0] = pwmFunction(0, (int16_t) (x/2 - 250));
+			currentDirection[1] = pwmFunction(1, (int16_t) (x/2 - 250));
+			move();		
 		}
-		else
-		{
-			newData = false;
-			startTargets[0] = currentDirection[0];
-			startTargets[1] = currentDirection[1];
-			timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
-			timer_start(TIMER_GROUP_0, TIMER_0);
-			//get final targets here
-			if(moveStruct->forward)
-			{
-				//forwared left
-				if(moveStruct->left)
-				{
-					currentTargets[0] = moveTargets.forwardLeft[0];
-					currentTargets[1] = moveTargets.forwardLeft[1];
-				}
-				//forward and right
-				else if(moveStruct->right)
-				{
-					currentTargets[0] = moveTargets.forwardRight[0];
-					currentTargets[1] = moveTargets.forwardRight[1];
-				}
-				//full forward
-				else
-				{
-					currentTargets[0] = moveTargets.fullForward[0];
-					currentTargets[1] = moveTargets.fullForward[1];
-				}
-			}
-			else if(moveStruct->back)
-			{
-				//back and pressing left
-				if(moveStruct->left)
-				{
-					currentTargets[0] = moveTargets.backLeft[0];
-					currentTargets[1] = moveTargets.backLeft[1];
-				}
-				//back and pressing right
-				else if(moveStruct->right)
-				{
-					currentTargets[0] = moveTargets.backRight[0];
-					currentTargets[1] = moveTargets.backRight[1];
-				}
-				//full force backward
-				else
-				{
-					currentTargets[0] = moveTargets.fullBack[0];
-					currentTargets[1] = moveTargets.fullBack[1];
-				}
-			}
-			//only going left, as we know forward and back aren't presssed
-			else if(moveStruct->left)
-			{
-				currentTargets[0] = moveTargets.fullLeft[0];
-				currentTargets[1] = moveTargets.fullLeft[1];
-			}
-			//only going right, as we know forward and back aren't pressed
-			else if(moveStruct->right)
-			{
-				currentTargets[0] = moveTargets.fullRight[0];
-				currentTargets[1] = moveTargets.fullRight[1];
-			}
-			//otherwise nothing is pressed, want to go back to being stationary.
-			else
-			{
-				currentTargets[0] = moveTargets.stop[0];
-				currentTargets[1] = moveTargets.stop[1];
-			}
-		}
-		currentDirection[0] = pwmFunction(0, (int16_t) (x/2 - 250));
-		currentDirection[1] = pwmFunction(1, (int16_t) (x/2 - 250));
-		move();	
+		//wait until new data is sent after we've reached our target
+		xSemaphoreTake(waitForData, portMAX_DELAY);
 	}
 }
 
@@ -283,8 +290,8 @@ static void on_receive(const int sock)
             //ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
 
 			setMoveStruct(rx_buffer, len);
-			newData = true;
-			xSemaphoreGive(xSemaphore);
+			//when data received, activate semaphore to mean we need to move now.
+			xSemaphoreGive(waitForData);
 
             // send() can return less bytes than supplied length.
             // Walk-around for robust implementation.
@@ -518,7 +525,7 @@ void doBlink()
 void app_main() {
 	moveStruct = malloc(sizeof(Movement));
 	*moveStruct = (Movement) {false, false, false, false};
-	xSemaphore = xSemaphoreCreateBinary();
+	waitForData = xSemaphoreCreateBinary();
 	
 	timer_init(TIMER_GROUP_0, TIMER_0, &config);
 	//THESE ARE THE RAW DUTIES
