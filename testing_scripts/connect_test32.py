@@ -9,7 +9,7 @@ stdscr.keypad(1)
 stdscr.refresh()
 stdscr.nodelay(True)
 
-client = Client("10.42.0.63", 30000)
+client = Client("10.42.0.182", 30000)
 client.initialize()
 
 id = 0;

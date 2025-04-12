@@ -1,14 +1,18 @@
 import asyncio
+import socket
 import websockets
 import json
 import time
-from backupTag import runTrakcer
+# from backupTag import runTrakcer
 
 #HOST = 'localhost'
 HOST = '10.42.0.1'
 PORT = 1234
 
+espSocketPath = "/tmp/gmESPSocket"
+
 game_time = 0
+num_players = 5
 
 def getTime():
     return game_time
@@ -20,6 +24,11 @@ async def serverGM(websocket, path):
         team1Score = 0
         team2Score = 1
         isReady = False 
+
+        # connect with esp now
+        espSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        espSocket.connect(espSocketPath)
+        print("connected to esp manager!")
 
         print("inside GM")
         while isReady==False:

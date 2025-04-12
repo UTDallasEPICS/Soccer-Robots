@@ -146,6 +146,7 @@ def get_ip_address():
         ip = "localhost"
     finally:
         s.close()
+    print("Ip: " + str(ip));
     return ip
 
 # Camera setup (have to flip vertically and horizontally because of the camera's position)

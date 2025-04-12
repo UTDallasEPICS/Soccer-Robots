@@ -2,6 +2,7 @@ import asyncio
 import websockets
 import json
 import time
+import socket
 #from NewServer import getTime()
 
 # If packet is published properly print to screen
@@ -12,8 +13,14 @@ def on_publish(client, userdata, mid):
 HOST = '10.42.0.1'
 PORT = 1235
 
+controlSocketPath = "/tmp/controlESPSocket"
+
 async def serverCM(websocket, path):
     print("inside CM")
+
+    controlSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    controlSocket.connect(controlSocketPath)
+    print("connected to esp!")
 
     while True:
         received_data = await websocket.recv()
