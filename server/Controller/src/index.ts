@@ -40,7 +40,7 @@ const printCurrentUsers = () => {
 const ws_raspberry = new WebSocket(`ws://${PI_ADDR}:${PORT_WSS_RASPBERRY}`)
 
 ws_raspberry.onopen = (event) => {
-    console.log(`WS_RASPBERRY CONNECTED ws://localhost:${PORT_WSS_RASPBERRY}`)
+    console.log(`WS_RASPBERRY CONNECTED ws://${PI_ADDR}:${PORT_WSS_RASPBERRY}`)
 }
 
 ws_raspberry.onerror = (error) => {

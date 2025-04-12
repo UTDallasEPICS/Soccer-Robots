@@ -36,7 +36,7 @@ let score2: number = 5
 enum GAME_STATE { NOT_PLAYING, SEND_CONFIRM, PLAYING, RESETTING }
 let game_state: GAME_STATE = GAME_STATE.NOT_PLAYING
 
-let robots_ready: boolean = true
+let robots_ready: boolean = false
 let numPlayers: number = 1
 
 // Match Settings
