@@ -35,14 +35,16 @@ const printCurrentUsers = () => {
 
 // WEBSOCKET RASPBERRY
 // Make sure to set up Raspberry server first
+
+// const ws_raspberry = new WebSocket(`ws://${PI_ADDR}:${PORT_WSS_RASPBERRY}`)
 const ws_raspberry = new WebSocket(`ws://${PI_ADDR}:${PORT_WSS_RASPBERRY}`)
 
 ws_raspberry.onopen = (event) => {
-    console.log(`WS_RASPBERRY CONNECTED ws://${PI_ADDR}:${PORT_WSS_RASPBERRY}`)
+    console.log(`WS_RASPBERRY CONNECTED ws://localhost:${PORT_WSS_RASPBERRY}`)
 }
 
 ws_raspberry.onerror = (error) => {
-    console.log("WS_RASPBERRY error: " + error.message)
+    console.log("WS_RASPBERRY error: " + error.message) 
     console.error(error)
 }
 ws_raspberry.onclose = (event) => {
