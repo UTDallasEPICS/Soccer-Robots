@@ -38,16 +38,24 @@ async def serverGM(websocket, path):
             received = json.loads(received_data)
             print(received)
             if received["type"] =="CHECK_READY":
-                print("READY GRAHHHHH")
-                isReady = True
-                await websocket.send(json.dumps({
-                    "type": "IS_READY",
-                    "payload": True
-                }))
-                break
+                # now, check with the esp manager if its ready
+                espSocket.sendall(b"Ready?")
+                readyCheck = espSocket.recv(3)
+                readyCheck = readyCheck.decode()
+                # if we return that they are ready, send that to the website
+                if(readyCheck == "yes"):
+                    print("READY GRAHHHHH")
+                    isReady = True
+                    await websocket.send(json.dumps({
+                        "type": "IS_READY",
+                        "payload": True
+                    }))
+                    break
+                else:
+                    # else we'd have returned that they're not ready
+                    print("Tried to check if ready, the ESP's are not!")
             else:
                 print("Supposed to receive ready signal, what we actually got: " + received["type"])
-                print("NOT READY")
 
         received_data = await websocket.recv()
         received = json.loads(received_data)    
