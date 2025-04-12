@@ -12,7 +12,7 @@ PORT = 1234
 espSocketPath = "/tmp/gmESPSocket"
 
 game_time = 0
-num_players = 5
+num_players = 2
 
 def getTime():
     return game_time
@@ -25,12 +25,14 @@ async def serverGM(websocket, path):
         team2Score = 1
         isReady = False 
 
+        print("inside GM")
+
         # connect with esp now
         espSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         espSocket.connect(espSocketPath)
         print("connected to esp manager!")
+        espSocket.sendall(num_players.to_bytes(1, "little")) 
 
-        print("inside GM")
         while isReady==False:
             received_data = await websocket.recv()
             received = json.loads(received_data)
