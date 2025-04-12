@@ -1,0 +1,11 @@
+[Unit]
+Description=OLED Info Display
+After=multi-user.target
+
+[Service]
+Type=simple
+Restart=always
+ExecStart=/home/rl2/Documents/daemon_scripts/oled_info_display/env/bin/python /home/rl2/Documents/daemon_scripts/oled_info_display/oled_info_display.py
+
+[Install]
+WantedBy=multi-user.target
