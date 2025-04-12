@@ -15,6 +15,7 @@ const prisma = new PrismaClient()
 
 // Environment variables
 dotenv.config({ path: "./.env" })
+const PI_ADDR : string = process.env.PI_ADDR
 const LOCALHOST: string = process.env.LOCALHOST ?? "localhost"
 const PORT_SSE_GM: number = parseInt(`${process.env.PORT_SSE_GM}`)
 const PORT_GM_RASPBERRY: number = parseInt(`${process.env.PORT_GM_RASPBERRY}`)
@@ -35,7 +36,7 @@ let score2: number = 5
 enum GAME_STATE { NOT_PLAYING, SEND_CONFIRM, PLAYING, RESETTING }
 let game_state: GAME_STATE = GAME_STATE.NOT_PLAYING
 
-let robots_ready: boolean = true
+let robots_ready: boolean = false
 let numPlayers: number = 1
 
 // Match Settings
@@ -73,6 +74,7 @@ const gameCycle = setInterval( async () => {
                 confirmation_timer = confirmation_timer_duration
             }
             else{ // ask if robots are ready to play. If so it sends a message "IS_READY", handled at the end of the fil
+                console.log("asking if ready")
                 ws_raspberry.send(JSON.stringify({
                     "type": "CHECK_READY",
                     "payload": ""
@@ -545,10 +547,10 @@ const broadcastScore = setInterval(() => {
 
 // SECTION: WEBSOCKET GAME MANAGER <-> RASPBERRY
 // Make sure to set up Raspberry server first
-const ws_raspberry = new WebSocket(`ws://localhost:${PORT_GM_RASPBERRY}`)
+const ws_raspberry = new WebSocket(`ws://${PI_ADDR}:${PORT_GM_RASPBERRY}`)
 
 ws_raspberry.onopen = (event) => {
-    console.log(`WS_RASPBERRY CONNECTED ws://localhost:${PORT_GM_RASPBERRY}`)
+    console.log(`WS_RASPBERRY CONNECTED ws://${PI_ADDR}:${PORT_GM_RASPBERRY}`)
 }
 
 ws_raspberry.onerror = (error) => {
