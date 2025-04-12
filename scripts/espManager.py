@@ -42,48 +42,89 @@ print("controller accepted communication!")
 # gm first sends number of players, store that
 numPlayers = gmConn.recv(1)[0]
 print("Number of players is gonna be " + str(numPlayers) + "!")
+parentPipes = [[None, None] for _ in range(numPlayers)]
 
 # create pipes between this main process and its children who conect to the actual esp boards
-childRead, parentWrite = os.pipe()
-parentRead, childWrite = os.pipe()
 
 # create child for every player we will be having
 for i in range(numPlayers):
+    childRead, parentWrite = os.pipe()
+    parentRead, childWrite = os.pipe()
     if(os.fork() == 0):
         # child runs this
+        del parentPipes
+        os.close(parentWrite)
+        os.close(parentRead)
         controlConn.close()
         gmConn.close()
         controlServer.close()
         gmServer.close()
-        os.close(parentWrite)
-        os.close(parentRead)
 
         print("we made a esp that will communicate with esp #" + str(i) + "!")
+
+        # loop restarts at end of each match
+        while(True):
+            # first get check if ready
+            readyCheck = os.read(childRead, 6)
+            readyCheck = readyCheck.decode()
+            # if readycheck, for now just say they're ready and write that to pip
+            if(readyCheck == "ready?"):
+                print("esp #" + str(i) + " is ready!")
+                os.write(childWrite, b"yes")
+            # otherwise we got something unintended, send that we ain't ready and restart the while loop
+            else:
+                print("Child here. Supposed to get ready command, but didn't! Instead got: " + readyCheck)
+                os.write(childWrite, b"no")
+                continue
 
         os.close(childWrite)
         os.close(childRead)
         print("killing child")
         os._exit(0)
+    else:
+        # store pipes of parent for that child
+        parentPipes[i][0] = parentRead
+        parentPipes[i][1] = parentWrite
+        os.close(childRead)
+        os.close(childWrite)
     
 # parent runs this
-os.close(childRead)
-os.close(childWrite)
-
-readyCheck = gmConn.recv(6)
-readyCheck = readyCheck.decode()
-if(readyCheck == "ready?"):
-    gmConn.sendall(b"yes")
-else:
-    print("esp manager expected ready check, got something else!")
-    gmConn.sendall(b"no")
-
 print("Parent finished creating its beautiful ESP children!")
+
+# loop restarts after each match
+while(True):
+    # wait for input
+    readyCheck = gmConn.recv(6)
+    readyCheck = readyCheck.decode()
+    # if asking if ready, ask all the esps if they're ready
+    if(readyCheck == "ready?"):
+        # tell all the esp children that you have to check ready
+        for i in range(numPlayers):
+            os.write(parentPipes[i][1], readyCheck.encode())
+        # initially set check to yes, if finding one that fails then make it "no"
+        espReady = "yes"
+        # now check all esp children what they return
+        for i in range(numPlayers):
+            askEsp = os.read(parentPipes[i][0], 3)
+            askEsp = askEsp.decode()
+            # if no, set entire result to no
+            if(askEsp == "no"):
+                print("one esp check failed!")
+                espReady = "no"
+        gmConn.sendall(espReady.encode())
+        if(espReady == "no"):
+            continue
+    else:
+        print("esp manager expected ready check, got this instead: " + readyCheck)
+        gmConn.sendall(b"error")
+        continue
+
 #stuff to do when finishing. first, wait for all children to die off like the pathetic saps they are
-for _ in range(numPlayers):
+for i in range(numPlayers):
     pid, status = os.wait()
+    os.close(parentPipes[i][0])
+    os.close(parentPipes[i][1])
     print("Child " + str(pid) + " returned with status " + str(status))
-os.close(parentRead)
-os.close(parentWrite)
 controlConn.close()
 gmConn.close()
 controlServer.close()

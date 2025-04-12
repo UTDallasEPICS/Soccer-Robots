@@ -39,7 +39,7 @@ async def serverGM(websocket, path):
             print(received)
             if received["type"] =="CHECK_READY":
                 # now, check with the esp manager if its ready
-                espSocket.sendall(b"Ready?")
+                espSocket.sendall(b"ready?")
                 readyCheck = espSocket.recv(3)
                 readyCheck = readyCheck.decode()
                 # if we return that they are ready, send that to the website
@@ -54,6 +54,10 @@ async def serverGM(websocket, path):
                 else:
                     # else we'd have returned that they're not ready
                     print("Tried to check if ready, the ESP's are not!")
+                    await websocket.send(json.dumps({
+                        "type": "IS_READY",
+                        "payload": False
+                    }))
             else:
                 print("Supposed to receive ready signal, what we actually got: " + received["type"])
 
