@@ -72,6 +72,10 @@ typedef struct sockaddr SA;
 
 static uint8_t s_led_state = 0;
 
+static bool charging;
+static bool inGame;
+static bool resetting;
+
 static uint8_t lowerReverseBound = 0;
 static uint8_t upperReverseBound = 0;
 static uint8_t lowerForwardBound = 0;
@@ -272,6 +276,33 @@ void doMovement(void *pvParameters)
 	}
 }
 
+//C has no send_all like python does, so we have to manually create it. Means all messages sent to the pi have to end with delimiter |
+static void sendMessage(const int sock, const char* message)
+{
+	send(sock, message, strlen(message), 0);
+	//delimiter to let reaspberry pi know this is the end of that message
+	send(sock, "|", 1, 0);
+}
+
+//C has no recv_all like python does, so we basically have to manually create it. This means all messages sent to the esp have to end with a delimiter |
+static int receiveMessage(const int sock, char* rx_buffer)
+{
+	uint8_t length = 0;
+	while(true)
+	{
+		if(recv(sock, rx_buffer + length, 1, 0) == -1)
+		{
+			return -1;
+		}
+		if(*(rx_buffer + length) == '|')
+		{
+			break;
+		}
+		length++;
+	}
+	return length;
+}
+
 static void on_receive(const int sock)
 {
     int len;
@@ -280,13 +311,39 @@ static void on_receive(const int sock)
 
     do 
 	{
-        len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
+        
+		len = receiveMessage(sock, rx_buffer);
         if (len < 0) {
             ESP_LOGE(TAG, "Error occurred during receiving: errno %d", errno);
         } else if (len == 0) {
             ESP_LOGW(TAG, "Connection closed");
         } else {
-            rx_buffer[len] = 0; // Null-terminate whatever is received and treat it like a string
+            rx_buffer[len] = '\0'; // Null-terminate whatever is received and treat it like a string
+
+			//if received a readyCheck message, return the right result
+			if(len >= 10 && strncmp(rx_buffer, "readyCheck", 10) == 0)
+			{
+				ESP_LOGI("MESSAGE", "Ready message received!");
+				//if its any of these, are not read
+				if(charging || resetting || inGame)
+				{
+					//send not ready
+					sendMessage(sock, "not-ready");
+				}
+				else
+				{
+					//send ready
+					sendMessage(sock, "ready");
+					inGame = true;
+				}
+				continue;
+			}
+			//if received an ignore message, ignore it
+			if(len >= 6 && strncmp(rx_buffer, "ignore", 6) == 0)
+			{
+				ESP_LOGI("MESSAGE", "Ignore message received!");
+				continue;
+			}
             //ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
 
 			setMoveStruct(rx_buffer, len);
@@ -525,8 +582,10 @@ void doBlink()
 void app_main() {
 	moveStruct = malloc(sizeof(Movement));
 	*moveStruct = (Movement) {false, false, false, false};
+	charging = false;
+	inGame = false;
+	resetting = false;
 	waitForData = xSemaphoreCreateBinary();
-	
 	timer_init(TIMER_GROUP_0, TIMER_0, &config);
 	//THESE ARE THE RAW DUTIES
 	lowerReverseBound = floor(convertPulseWidthToPercentDuty(800));
@@ -537,6 +596,8 @@ void app_main() {
 	ledc_setup();
 	
 	doBlink();
+
+	vTaskDelay(pdMS_TO_TICKS(500));
 
 	// while(true)
 	// {
