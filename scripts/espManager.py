@@ -1,15 +1,18 @@
 import socket
 import os
+from ESPClient import ESPClient
 
 socketToGm = "/tmp/gmESPSocket"
 socketToControl = "/tmp/controlESPSocket" 
 
-esp0Addr = "idk"
-esp1Addr = "idk"
-esp2Addr = "idk"
-esp3Addr = "idk"
-esp4Addr = "idk"
-esp5Addr = "idk"
+espAddrs = {}
+espAddrs["esp0"] = "10.42.0.182"
+espAddrs["esp1"] = "idk"
+espAddrs["esp2"] = "idk"
+espAddrs["esp2"] = "idk"
+espAddrs["esp3"] = "idk"
+espAddrs["esp4"] = "idk"
+espAddrs["esp5"] = "idk"
 
 # removing these files if they exist, so we can recreate them
 if(os.path.exists(socketToGm)):
@@ -45,7 +48,6 @@ print("Number of players is gonna be " + str(numPlayers) + "!")
 parentPipes = [[None, None] for _ in range(numPlayers)]
 
 # create pipes between this main process and its children who conect to the actual esp boards
-
 # create child for every player we will be having
 for i in range(numPlayers):
     childRead, parentWrite = os.pipe()
@@ -60,6 +62,9 @@ for i in range(numPlayers):
         controlServer.close()
         gmServer.close()
 
+        connection = ESPClient(espAddrs["esp" + str(i)], 30000)
+        # 2 is the number of seconds to wait to connect
+        espConnected = connection.tryConnect(2)
         print("we made a esp that will communicate with esp #" + str(i) + "!")
 
         # loop restarts at end of each match
@@ -67,15 +72,33 @@ for i in range(numPlayers):
             # first get check if ready
             readyCheck = os.read(childRead, 6)
             readyCheck = readyCheck.decode()
-            # if readycheck, for now just say they're ready and write that to pip
             if(readyCheck == "ready?"):
-                print("esp #" + str(i) + " is ready!")
-                os.write(childWrite, b"yes")
+                # if disconnected, try to reconnection one more time
+                if(not espConnected):
+                    espConnected = connection.tryConnect(2)
+                # if still disconnected, say it failed connection
+                if(not espConnected):
+                    print("Esp #" + str(i) + " has failed connection again! fraud")
+                    os.write(childWrite, b"no")
+                #else if connected that's nice. now, send request if its ready to the esp 
+                else:
+                    print("esp #" + str(i) + " has a connection!")
+                    connection.send("readyCheck")
+                    answer = connection.recv(2)
+                    if(answer == "ready"):
+                        os.write(childWrite, b"yes")
+                    else:
+                        os.write(childWrite, b"no")
             # otherwise we got something unintended, send that we ain't ready and restart the while loop
             else:
                 print("Child here. Supposed to get ready command, but didn't! Instead got: " + readyCheck)
                 os.write(childWrite, b"no")
+            nextCommand = os.read(childRead, 10)
+            nextCommand = nextCommand.decode()
+            # if the parent wants us to reset, we gotta do that
+            if(nextCommand == "reset"):
                 continue
+            
 
         os.close(childWrite)
         os.close(childRead)
@@ -113,6 +136,9 @@ while(True):
                 espReady = "no"
         gmConn.sendall(espReady.encode())
         if(espReady == "no"):
+            # now for each of the children, reset them back to their starting points
+            for i in range(numPlayers):
+                os.write(parentPipes[i][1], b"reset")
             continue
     else:
         print("esp manager expected ready check, got this instead: " + readyCheck)

@@ -12,7 +12,7 @@ PORT = 1234
 espSocketPath = "/tmp/gmESPSocket"
 
 game_time = 0
-num_players = 2
+num_players = 1
 
 def getTime():
     return game_time
