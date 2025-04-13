@@ -38,8 +38,8 @@ async def serverCM(websocket, path):
                     # currInput = int(received["payload"]["keys"], 2)
                     # print("Player Two Input (decimal): " + str(currInput))
                     print("Player Two Input (bits): " + received["payload"]["keys"])
-            sentData = received["payload"]["playernumber"] + "|" + received["payload"]["keys"]
-            controlSocket.sendall(sentdata.encode())
+            sentData = str(received["payload"]["playernumber"]) + "|" + received["payload"]["keys"]
+            controlSocket.sendall(sentData.encode())
 
 
 start_server = websockets.serve(serverCM, HOST, PORT)

@@ -6,7 +6,7 @@ socketToGm = "/tmp/gmESPSocket"
 socketToControl = "/tmp/controlESPSocket" 
 
 espAddrs = {}
-espAddrs["esp0"] = "10.42.0.182"
+espAddrs["esp0"] = "10.42.0.201"
 espAddrs["esp1"] = "idk"
 espAddrs["esp2"] = "idk"
 espAddrs["esp2"] = "idk"
@@ -112,11 +112,15 @@ for i in range(numPlayers):
                 nextCommand = nextCommand.decode()
                 # if the parent wants us to reset, we gotta do that
                 if(nextCommand == "reset"):
-                    continue
+                    print("restarting at least once!")
+                    break
                 # else, we assume its a motor movement command
                 else:
+                    print("command is : " + nextCommand)
+                    print("now getting input for an esp!")
                     # we don't really care yet about if it succeeded or not
                     formattedInput = getKeysFromNumbers(nextCommand)
+                    connection.send(formattedInput)
             
 
         os.close(childWrite)
@@ -165,7 +169,7 @@ while(True):
         continue
     # now, game starts!
     
-    while(true):
+    while(True):
         #here, briefly check the time
 
         #next, get controller data, and send it
