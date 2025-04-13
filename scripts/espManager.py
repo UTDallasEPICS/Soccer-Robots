@@ -82,12 +82,13 @@ for i in range(numPlayers):
                     os.write(childWrite, b"no")
                 #else if connected that's nice. now, send request if its ready to the esp 
                 else:
-                    print("esp #" + str(i) + " has a connection!")
                     connection.send("readyCheck")
                     answer = connection.recv(2)
                     if(answer == "ready"):
+                        print("Esp #" + str(i) + " is ready!")
                         os.write(childWrite, b"yes")
                     else:
+                        print("esp #" + str(i) + " is not ready!")
                         os.write(childWrite, b"no")
             # otherwise we got something unintended, send that we ain't ready and restart the while loop
             else:
