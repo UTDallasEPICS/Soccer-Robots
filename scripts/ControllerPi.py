@@ -29,15 +29,18 @@ async def serverCM(websocket, path):
             if received["payload"]["playernumber"] == 0:
                 if received["payload"]["keys"] != "0000":
                     print("Player One Moved")
-                    currInput = int(received["payload"]["keys"], 2)
-                    print("Player One Input (decimal): " + str(currInput))
+                    # currInput = int(received["payload"]["keys"], 2)
+                    # print("Player One Input (decimal): " + str(currInput))
                     print("Player One Input (bits): " + received["payload"]["keys"])
             if received["payload"]["playernumber"] == 1:
                 if received["payload"]["keys"] != "0000":
                     print("Player Two Moved")
-                    currInput = int(received["payload"]["keys"], 2)
-                    print("Player Two Input (decimal): " + str(currInput))
+                    # currInput = int(received["payload"]["keys"], 2)
+                    # print("Player Two Input (decimal): " + str(currInput))
                     print("Player Two Input (bits): " + received["payload"]["keys"])
+            sentData = received["payload"]["playernumber"] + "|" + received["payload"]["keys"]
+            controlSocket.sendall(sentdata.encode())
+
 
 start_server = websockets.serve(serverCM, HOST, PORT)
 print("\nSTARTED CM SERVER")

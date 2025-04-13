@@ -40,12 +40,25 @@ controlServer.listen(1)
 print("ESP listening for controller")
 
 controlConn, _ = controlServer.accept()
+controlConn.settimeout(1)
 print("controller accepted communication!")
 
 # gm first sends number of players, store that
 numPlayers = gmConn.recv(1)[0]
 print("Number of players is gonna be " + str(numPlayers) + "!")
 parentPipes = [[None, None] for _ in range(numPlayers)]
+
+def getKeysFromNumbers(numInput):
+    finalMessage = ""
+    if(numInput[0] == "1"):
+        finalMessage += "u"
+    if(numInput[1] == "1"):
+        finalMessage += "l"
+    if(numInput[2] == "1"):
+        finalMessage += "d"
+    if(numInput[3] == "1"):
+        finalMessage += "r"
+    return finalMessage
 
 # create pipes between this main process and its children who conect to the actual esp boards
 # create child for every player we will be having
@@ -94,11 +107,16 @@ for i in range(numPlayers):
             else:
                 print("Child here. Supposed to get ready command, but didn't! Instead got: " + readyCheck)
                 os.write(childWrite, b"no")
-            nextCommand = os.read(childRead, 10)
-            nextCommand = nextCommand.decode()
-            # if the parent wants us to reset, we gotta do that
-            if(nextCommand == "reset"):
-                continue
+            while(True):
+                nextCommand = os.read(childRead, 10)
+                nextCommand = nextCommand.decode()
+                # if the parent wants us to reset, we gotta do that
+                if(nextCommand == "reset"):
+                    continue
+                # else, we assume its a motor movement command
+                else:
+                    # we don't really care yet about if it succeeded or not
+                    formattedInput = getKeysFromNumbers(nextCommand)
             
 
         os.close(childWrite)
@@ -145,6 +163,24 @@ while(True):
         print("esp manager expected ready check, got this instead: " + readyCheck)
         gmConn.sendall(b"error")
         continue
+    # now, game starts!
+    
+    while(true):
+        #here, briefly check the time
+
+        #next, get controller data, and send it
+        try:
+            movementData = controlConn.recv(6)
+            movementData = movementData.decode()
+            # first one sent is the id
+            playerId = int(movementData[0])
+            # after the first two chars, that is the movement data
+            movementData = movementData[2:]
+            os.write(parentPipes[playerId][1], movementData.encode())
+        # no big deal if we don't get data in that time
+        except socket.timeout:
+            print("")
+
 
 #stuff to do when finishing. first, wait for all children to die off like the pathetic saps they are
 for i in range(numPlayers):
