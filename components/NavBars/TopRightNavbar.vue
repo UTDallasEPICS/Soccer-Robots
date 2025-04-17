@@ -1,6 +1,5 @@
 <template>
-  <div class="">
-    <!--Show the profile component if they're loggedi n, otherwise the component asking them to log in or sign up.-->
+  <div class="Login">
     <Profile v-if="userTrue"></Profile>
     <LogInSignUp v-else></LogInSignUp>
   </div>
@@ -32,6 +31,5 @@ const closing = () => {
 </script>
 
 
-<style>
-
+<style scoped>
 </style>
