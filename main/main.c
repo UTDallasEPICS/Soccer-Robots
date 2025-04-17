@@ -79,6 +79,7 @@ static bool resetting;
 static uint8_t lowerReverseBound = 0;
 static uint8_t upperReverseBound = 0;
 static uint8_t lowerForwardBound = 0;
+TaskHandle_t doMovementHandle = NULL;
 
 static float currentDirection[2] = {0, 0};
 static int8_t currentTargets[2] = {0, 0};
@@ -290,9 +291,15 @@ static int receiveMessage(const int sock, char* rx_buffer)
 	uint8_t length = 0;
 	while(true)
 	{
-		if(recv(sock, rx_buffer + length, 1, 0) == -1)
+		int8_t status = recv(sock, rx_buffer + length, 1, 0);
+		ESP_LOGI("BIT", "Got char %c", *(rx_buffer + length));
+		if(status == -1)
 		{
 			return -1;
+		}
+		if(status == 0)
+		{
+			return 0;
 		}
 		if(*(rx_buffer + length) == '|')
 		{
@@ -335,6 +342,7 @@ static void on_receive(const int sock)
 					//send ready
 					sendMessage(sock, "ready");
 					inGame = true;
+					xTaskCreate(doMovement, "doMovement", 8192, NULL, 4, &doMovementHandle);
 				}
 				continue;
 			}
@@ -344,8 +352,7 @@ static void on_receive(const int sock)
 				ESP_LOGI("MESSAGE", "Ignore message received!");
 				continue;
 			}
-            //ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
-
+            ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
 			setMoveStruct(rx_buffer, len);
 			//when data received, activate semaphore to mean we need to move now.
 			xSemaphoreGive(waitForData);
@@ -414,7 +421,6 @@ void taskServer(void *pvParameters){
         goto CLEAN_UP;
     }
 
-	TaskHandle_t doMovementHandle = NULL;
     while (1) 
 	{
         ESP_LOGI(TAG, "Socket listening");
@@ -444,7 +450,6 @@ void taskServer(void *pvParameters){
         }
         ESP_LOGI(TAG, "Socket accepted ip address: %s", addr_str);
 		//create task to do movement
-		xTaskCreate(doMovement, "doMovement", 8192, NULL, 4, &doMovementHandle);
 
 		// Respond to client
         on_receive(sock);
