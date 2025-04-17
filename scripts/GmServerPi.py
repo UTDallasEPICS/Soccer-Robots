@@ -6,7 +6,7 @@ import time
 # from backupTag import runTrakcer
 
 #HOST = 'localhost'
-HOST = '10.42.0.1'
+HOST = '192.168.134.90'
 PORT = 1234
 
 espSocketPath = "/tmp/gmESPSocket"

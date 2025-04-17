@@ -6,7 +6,7 @@ socketToGm = "/tmp/gmESPSocket"
 socketToControl = "/tmp/controlESPSocket" 
 
 espAddrs = {}
-espAddrs["esp0"] = "10.42.0.201"
+espAddrs["esp0"] = "192.168.134.176"
 espAddrs["esp1"] = "idk"
 espAddrs["esp2"] = "idk"
 espAddrs["esp2"] = "idk"
@@ -120,7 +120,8 @@ for i in range(numPlayers):
                     print("now getting input for an esp!")
                     # we don't really care yet about if it succeeded or not
                     formattedInput = getKeysFromNumbers(nextCommand)
-                    connection.send(formattedInput)
+                    if(formattedInput != ""):
+                        connection.send(formattedInput)
             
 
         os.close(childWrite)
@@ -176,11 +177,14 @@ while(True):
         try:
             movementData = controlConn.recv(6)
             movementData = movementData.decode()
+            print("move data: " + movementData)
             # first one sent is the id
             playerId = int(movementData[0])
-            # after the first two chars, that is the movement data
-            movementData = movementData[2:]
-            os.write(parentPipes[playerId][1], movementData.encode())
+            # for now since only one esp
+            if(playerId == 0):
+                # after the first two chars, that is the movement data
+                movementData = movementData[2:]
+                os.write(parentPipes[playerId][1], movementData.encode())
         # no big deal if we don't get data in that time
         except socket.timeout:
             print("")

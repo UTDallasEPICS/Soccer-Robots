@@ -10,7 +10,7 @@ def on_publish(client, userdata, mid):
     print("Published to esp32")
 
 #HOST = 'localhost'
-HOST = '10.42.0.1'
+HOST = '192.168.134.90'
 PORT = 1235
 
 controlSocketPath = "/tmp/controlESPSocket"
@@ -28,17 +28,16 @@ async def serverCM(websocket, path):
         if received["type"] == "KEY_INPUT":
             if received["payload"]["playernumber"] == 0:
                 if received["payload"]["keys"] != "0000":
-                    print("Player One Moved")
                     # currInput = int(received["payload"]["keys"], 2)
                     # print("Player One Input (decimal): " + str(currInput))
                     print("Player One Input (bits): " + received["payload"]["keys"])
             if received["payload"]["playernumber"] == 1:
                 if received["payload"]["keys"] != "0000":
-                    print("Player Two Moved")
                     # currInput = int(received["payload"]["keys"], 2)
                     # print("Player Two Input (decimal): " + str(currInput))
                     print("Player Two Input (bits): " + received["payload"]["keys"])
             sentData = str(received["payload"]["playernumber"]) + "|" + received["payload"]["keys"]
+            print(sentData)
             controlSocket.sendall(sentData.encode())
 
 
