@@ -1,5 +1,5 @@
 <template>
-  <div class="">
+  <div class="Login">
     <Profile v-if="userTrue"></Profile>
     <LogInSignUp v-else></LogInSignUp>
   </div>
@@ -27,6 +27,5 @@ const closing = () => {
 </script>
 
 
-<style>
-
+<style scoped>
 </style>

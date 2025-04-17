@@ -1,5 +1,5 @@
 <template>
-    <div class="border-black rounded-lg border-4 border-b-0 rounded-b-none" style="width: 340px; height: 500px;">
+    <div class="border-black rounded-lg border-4 border-b-0 rounded-b-none" style="width: 330px; height: 300px; margin-top: 4%;">
         <p class="text-center border-b-2 border-black border-b-4" style="font-weight: bold; font-size: 24px">Queue</p>
         <div class="overflow-y-auto h-full">
             <div v-for="(user, index) in queueUsers" :key="index">
