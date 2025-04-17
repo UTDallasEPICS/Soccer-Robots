@@ -25,6 +25,7 @@ const PORT_EXPRESS_CONTROLLER_GAMEMANAGER: number = parseInt(`${process.env.PORT
 // SHARED VARIABLES
 const queue: Array<{username: string, user_id: string, ws: any}> = []
 const players: Array<{username: string, user_id: string, ws: any, accepted: boolean}> = []
+const currentPlayers: Array<{user_id: string, playernumber: any}> = []
 let CONFIRMATION_PASSWORD: string = "sousounofrieren" // "Tearful goodbyes aren’t our style. It’d be embarrassing when we meet again"
 let CONTROLLER_ACCESS: string = "donutvampire" // the initial value does not do anything here
 let timer: number = 0
@@ -56,41 +57,65 @@ const gameCycle = setInterval( async () => {
     if(game_state == GAME_STATE.NOT_PLAYING){
         // Check for sufficient users in queue to send confirmation request
         await matchSettings()
-        if(queue.length >= 2){
+        if(queue.length == numPlayers*2){
+            
             if(robots_ready){ // robots are ready to play
                 game_state = GAME_STATE.SEND_CONFIRM
+
                 CONFIRMATION_PASSWORD = nanoid() // new password for each confirmation attempt
-                //to each client connected, send them a request to confirm the match. will be indices 0 and 1 as those are next up (will be
-                //updated when there's more players)
-                queue[0].ws.send(JSON.stringify({
-                    "type": "MATCH_CONFIRMATION",
-                    "payload": CONFIRMATION_PASSWORD
-                }))
-                queue[1].ws.send(JSON.stringify({
-                    "type": "MATCH_CONFIRMATION",
-                    "payload": CONFIRMATION_PASSWORD
-                }))
-                //set confirmation timer to begin
+                
+                for(let i = 0; i < numPlayers; i++){
+                    queue[i*2].ws.send(JSON.stringify({
+                        "type": "MATCH_CONFIRMATION",
+                        "payload": CONFIRMATION_PASSWORD
+                    }))
+                    queue[i*2+1].ws.send(JSON.stringify({
+                        "type": "MATCH_CONFIRMATION",
+                        "payload": CONFIRMATION_PASSWORD
+                    }))
+                }
                 confirmation_timer = confirmation_timer_duration
+
             }
-            else{ // ask if robots are ready to play. If so it sends a message "IS_READY", handled at the end of the fil
-                console.log("asking if ready")
+            else{ // ask if robots are ready to play
                 ws_raspberry.send(JSON.stringify({
                     "type": "CHECK_READY",
                     "payload": ""
                 }))
             }
+
+
         }
     }
     //else if currently confirming
     else if(game_state == GAME_STATE.SEND_CONFIRM){
         // Check if received 2 confirmation response
+        // Check if received confirmation responses
         if(confirmation_timer == 0){ // time's up
-            // 2 accepts -> start game
-            if(players.length == 2 && players[0]["accepted"] && players[1]["accepted"]){
+            let numAccepted = 0
+
+            for(let i = 0; i < players.length; i++){
+                if(players[i]["accepted"]){
+                    numAccepted++
+                }
+            }
+
+            //checks if the amount of accepted players is equal to total number of players
+            if(numAccepted = numPlayers*2){
+
                 game_state = GAME_STATE.PLAYING
                 CONTROLLER_ACCESS = nanoid() // new access code for each game
-                // tell Controller server to change access code, and sends the new one
+
+                // tell players to start the game
+                for(let i = 0; i < players.length; i++){
+                    let newPlayer = {
+                        user_id: players[i]["user_id"],
+                        playernumber: i+1
+                    }
+                    currentPlayers.push(newPlayer)
+                }
+
+                // tell Controller server to change access code
                 await fetch(`http://${LOCALHOST}:${PORT_EXPRESS_CONTROLLER_GAMEMANAGER}/accesspassword`, {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},
@@ -98,86 +123,76 @@ const gameCycle = setInterval( async () => {
                         "accesspassword": CONTROLLER_ACCESS
                     })
                 })
-                
-                //hardcode testing with players and sending to database//
-
-                console.log(players[0]["username"] + " vs " + players[1]["username"])
                 // authorize players in Controller server to send key inputs
                 await fetch(`http://${LOCALHOST}:${PORT_EXPRESS_CONTROLLER_GAMEMANAGER}/addusers`, {
                     method: "POST",
                     headers: {"Content-Type": "application/json"},
-                    //sending the users so controller knows which ones
-                    body: JSON.stringify({ "users": [  {"user_id": players[0]["user_id"], "playernumber": 0}, 
-                                            {"user_id": players[1]["user_id"], "playernumber": 1}] })
+                    body: JSON.stringify(currentPlayers)
                 })
+
                 // give players the access code to connect to Controller server WebSocket
-                queue[0].ws.send(JSON.stringify({
-                    "type": "MATCH_START",
-                    "payload": CONTROLLER_ACCESS
-                }))
-                queue[1].ws.send(JSON.stringify({
-                    "type": "MATCH_START",
-                    "payload": CONTROLLER_ACCESS
-                }))
+                for(let i = 0; i < currentPlayers.length; i++){
+                    queue[i].ws.send(JSON.stringify({
+                        "type": "MATCH_START",
+                        "payload": CONTROLLER_ACCESS
+                    }))                
+                }
                 // close ws because players are not in queue anymore
-                queue[0]["ws"].close()
-                queue[1]["ws"].close()
-                //take them outta the queue array
-                queue.splice(0, 2)
-                //begin timer
+                for(let i = 0; i < currentPlayers.length; i++){
+                    queue[i]["ws"].close()
+                }
+                queue.splice(0, currentPlayers.length)
                 timer = timer_duration
+
                 // tell Raspberry server to start the game
                 ws_raspberry.send(JSON.stringify({
                     "type": "GAME_START",
                     "payload": {"timer": timer_duration}
                 }))
             }
-            else{ // did not get 2 accepts
-                // signal players to reset confirmation 
-                queue[0]["ws"].send(JSON.stringify({
-                    "type": "MATCH_CONFIRMATION_RESET",
-                    "payload": ""
-                }))
-                queue[1]["ws"].send(JSON.stringify({
-                    "type": "MATCH_CONFIRMATION_RESET",
-                    "payload": ""
-                }))
-                // find the player(s) that declined/did not respond and remove from queue/close ws connection
-                // index of user queue[0] in players array
-                const indexA: number = players.findIndex((element) => { return element["username"] === queue[0]["username"]})
-                // index of user queue[1] in players array
-                const indexB: number = players.findIndex((element) => { return element["username"] === queue[1]["username"]})
-                let removeA: boolean = false
-                let removeB: boolean = false
-                if(indexA == -1 || players[indexA]["accepted"] === false){ // close connection for player A if did not respond or declined
-                    queue[0]["ws"].close()
-                    removeA = true
-                }
-                if(indexB == -1 || players[indexB]["accepted"] === false){ // close connection for player B if did not respond or declined
-                    queue[1]["ws"].close()
-                    removeB = true
-                }
-                // remove declined/did not respond players from queue
-                if(removeA && removeB){
-                    queue.splice(0, 2)
-                }
-                else if(removeA){
-                    queue.splice(0, 1)
-                }
-                else if(removeB){
-                    queue.splice(1, 1)
-                }
-                game_state = GAME_STATE.NOT_PLAYING
-                players.splice(0, players.length) // clear array of players
-            }
+
         }
-        //each loop, the confirmation timer goes down
+        else{ // did not get all accepts
+
+            // signal players to reset confirmation 
+            for(let i = 0; i < players.length; i++){
+                queue[i]["ws"].send(JSON.stringify({
+                    "type": "MATCH_CONFIRMATION_RESET",
+                    "payload": ""
+                }))
+            }
+
+
+            let declinedArray = []
+            // find the player(s) that declined/did not respond and remove from queue/close ws connection
+            for(let i = 0; i < players.length; i++){
+                let index = players.findIndex((element) => { return element["username"] === queue[i]["username"]})
+                if(index == -1 || players[index]["accepted"] === false){
+                    queue[i]["ws"].close()
+                    declinedArray.push(queue[i]["user_id"])
+                }
+            }
+
+            //Remove players from queue
+            let num = queue.length
+            for(let j = 0; j < declinedArray.length; j++){
+                let ID = declinedArray[j]
+                for(let m = 0; m < num; m++){
+                    if(queue[m]["user_id"] === ID){
+                        queue.splice(m, 1)
+                        num--
+                    }
+                }
+            }
+            game_state = GAME_STATE.NOT_PLAYING
+            players.splice(0, players.length) // clear players array
+        }
         confirmation_timer--
     }
     else if(game_state == GAME_STATE.PLAYING){
         // Check when timer reaches 0
         console.log(`TIMER: ${timer} | ${players[0]["username"]} vs ${players[1]["username"]}`)
-        //timer--;
+        timer--;
         if(timer == 0){
             //when timer over, go to reset state
             game_state = GAME_STATE.RESETTING
