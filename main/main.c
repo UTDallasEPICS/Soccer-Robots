@@ -79,7 +79,10 @@ static bool resetting;
 static uint8_t lowerReverseBound = 0;
 static uint8_t upperReverseBound = 0;
 static uint8_t lowerForwardBound = 0;
+
 TaskHandle_t doMovementHandle = NULL;
+bool finishedMoving = false;
+bool interruptMovement = false;
 
 static float currentDirection[2] = {0, 0};
 static int8_t currentTargets[2] = {0, 0};
@@ -271,8 +274,17 @@ void doMovement(void *pvParameters)
 			currentDirection[0] = pwmFunction(0, (int16_t) (x/2 - 250));
 			currentDirection[1] = pwmFunction(1, (int16_t) (x/2 - 250));
 			move();		
+			if(interruptMovement)
+			{
+				break;
+			}
+		}
+		if(interruptMovement)
+		{
+			continue;
 		}
 		//wait until new data is sent after we've reached our target
+		finishedMoving = true;
 		xSemaphoreTake(waitForData, portMAX_DELAY);
 	}
 }
@@ -354,8 +366,16 @@ static void on_receive(const int sock)
 			}
             ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
 			setMoveStruct(rx_buffer, len);
-			//when data received, activate semaphore to mean we need to move now.
-			xSemaphoreGive(waitForData);
+			//when data received and movement is blocking, activate semaphore to tell it to move now
+			if(finishedMoving)
+			{
+				xSemaphoreGive(waitForData);
+			}
+			//if we were already moving to the previous target, set this to true to let program know we need to move differently now
+			else
+			{
+				interruptMovement = true;
+			}
 
             // send() can return less bytes than supplied length.
             // Walk-around for robust implementation.
