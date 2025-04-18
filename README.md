@@ -4,6 +4,7 @@
 <details><summary><h2>Table of Contents</h2></summary>
 
 - [Conceptual Overview](#conceptual-overview)
+- [Repository Branches Map](#repository-branches-map)
 - [Functional Requirements](#functional-requirements)
 - [Third Party Integrations](#third-party-integrations)
 - [Tech Stack](#tech-stack)
@@ -37,7 +38,7 @@ Our project not only caters to the entertainment needs of our users but also ser
 - main_robot: Main branch for the robot side of the project
   - esp32_code: Development branch for robot side of the project
 - raspberry_pi: Main branch for web/game server code. A raspberry pi is used to host the website, manage the game, and bridge control from user to robots.
-  -oled_pi: Contains a service script that runs on raspberry pi startup. This displays IP information of the raspberry pi. 
+  - oled_pi: Contains a service script that runs on raspberry pi startup. This displays IP information of the raspberry pi. 
 
 ## Users/Roles
 
