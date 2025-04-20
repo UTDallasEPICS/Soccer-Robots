@@ -117,6 +117,7 @@ for i in range(numPlayers):
                 nextCommand = nextCommand.decode()
                 # if the parent wants us to reset, we gotta do that
                 if(nextCommand == "rset"):
+                    connection.send("reset")
                     break
                 # else, we assume its a motor movement command
                 else:
@@ -195,6 +196,8 @@ while(True):
         except socket.timeout:
             print("")
     print("Game over!")
+    for i in range(numPlayers):
+        os.write(parentPipes[i][1], b"rset")
 
 
 #stuff to do when finishing. first, wait for all children to die off like the pathetic saps they are
