@@ -117,6 +117,7 @@ for i in range(numPlayers):
                 nextCommand = nextCommand.decode()
                 # if the parent wants us to reset, we gotta do that
                 if(nextCommand == "rset"):
+                    print("Damn we resettin")
                     connection.send("reset")
                     break
                 # else, we assume its a motor movement command
@@ -174,7 +175,7 @@ while(True):
             continue
     else:
         print("esp manager expected ready check, got this instead: " + readyCheck)
-        gmConn.sendall(b"error")
+        gmConn.sendall(b"no")
         continue
     # now, game starts!
     

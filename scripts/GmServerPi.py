@@ -23,6 +23,19 @@ def getTime():
 runBackTracking = False
 
 async def serverGM(websocket, path):
+    # first time connecting from website, as placeholder say that webiste "sends" the number of players to the esp
+
+    #before communicating with the esp, to prevent race conditions first allocate sharemd memory.
+    timerFile = os.open(sharedMemory, os.O_CREAT | os.O_RDWR)
+    os.ftruncate(timerFile, 1)
+    memLocation = mmap.mmap(timerFile, 1)
+
+    # connect with esp now
+    espSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    espSocket.connect(espSocketPath)
+    print("connected to esp manager!")
+
+    espSocket.sendall(num_players.to_bytes(1, "little")) 
     while True:
         game_time = 0
         team1Score = 0
@@ -30,17 +43,6 @@ async def serverGM(websocket, path):
         isReady = False 
 
         print("inside GM")
-
-        #before communicating with the esp, to prevent race conditions first allocate sharemd memory.
-        timerFile = os.open(sharedMemory, os.O_CREAT | os.O_RDWR)
-        os.ftruncate(timerFile, 1)
-        memLocation = mmap.mmap(timerFile, 1)
-
-        # connect with esp now
-        espSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        espSocket.connect(espSocketPath)
-        print("connected to esp manager!")
-        espSocket.sendall(num_players.to_bytes(1, "little")) 
 
         while isReady==False:
             received_data = await websocket.recv()
