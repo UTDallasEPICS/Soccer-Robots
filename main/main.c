@@ -358,6 +358,14 @@ static void on_receive(const int sock)
 				}
 				continue;
 			}
+			//if received game over message, break out
+			if(len >= 5 && strncmp(rx_buffer, "reset", 5) == 0)
+			{
+				inGame = false;
+				interruptMovement = false;
+				//for now, we can probably just break our esp out of this on receive, that will also destroy the movement task. Though, that's only after we finish moving.
+				break;
+			}
 			//if received an ignore message, ignore it
 			if(len >= 6 && strncmp(rx_buffer, "ignore", 6) == 0)
 			{
@@ -477,6 +485,11 @@ void taskServer(void *pvParameters){
 		// Close client socket
         shutdown(sock, 0);
 
+		//before finishing the movement task, spin until it's done.
+		while(finishedMoving != false)
+		{
+			ESP_LOGI("WAIT", "Waiting!");
+		}
 		//delete the movement task since socket disconnected
 		vTaskDelete(doMovementHandle);
 		doMovementHandle = NULL;
