@@ -37,7 +37,6 @@ async def serverCM(websocket, path):
                     # print("Player Two Input (decimal): " + str(currInput))
                     print("Player Two Input (bits): " + received["payload"]["keys"])
             sentData = str(received["payload"]["playernumber"]) + "|" + received["payload"]["keys"]
-            print(sentData)
             controlSocket.sendall(sentData.encode())
 
 

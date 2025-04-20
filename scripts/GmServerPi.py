@@ -3,6 +3,8 @@ import socket
 import websockets
 import json
 import time
+import os
+import mmap
 # from backupTag import runTrakcer
 
 #HOST = 'localhost'
@@ -10,6 +12,8 @@ HOST = '192.168.134.90'
 PORT = 1234
 
 espSocketPath = "/tmp/gmESPSocket"
+
+sharedMemory = "/tmp/shared_timer"
 
 game_time = 0
 num_players = 1
@@ -26,6 +30,11 @@ async def serverGM(websocket, path):
         isReady = False 
 
         print("inside GM")
+
+        #before communicating with the esp, to prevent race conditions first allocate sharemd memory.
+        timerFile = os.open(sharedMemory, os.O_CREAT | os.O_RDWR)
+        os.ftruncate(timerFile, 1)
+        memLocation = mmap.mmap(timerFile, 1)
 
         # connect with esp now
         espSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -78,6 +87,7 @@ async def serverGM(websocket, path):
                 await websocket.send(json.dumps(final_score_update))
                 isReady = False
                 runBackTracking = True
+                memLocation[:1] = bytes([0])
                 break
 
             if game_time%7==0:
@@ -94,9 +104,9 @@ async def serverGM(websocket, path):
         print("\n\n")
         print("FINAL SCORE: Team 1: ", team1Score, " Team 2: ", team2Score)
 
-        if runBackTracking:
-            test = runTrakcer()
-            runBackTracking = False
+        # if runBackTracking:
+            # test = runTrakcer()
+            # runBackTracking = False
 
 start_server = websockets.serve(serverGM, HOST, PORT)
 print("STARTED GM SERVER")

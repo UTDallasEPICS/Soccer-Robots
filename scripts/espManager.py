@@ -1,9 +1,12 @@
 import socket
 import os
+import mmap
 from ESPClient import ESPClient
 
 socketToGm = "/tmp/gmESPSocket"
 socketToControl = "/tmp/controlESPSocket" 
+
+timerSharedMemory = "/tmp/shared_timer"
 
 espAddrs = {}
 espAddrs["esp0"] = "192.168.134.176"
@@ -108,16 +111,15 @@ for i in range(numPlayers):
                 print("Child here. Supposed to get ready command, but didn't! Instead got: " + readyCheck)
                 os.write(childWrite, b"no")
             while(True):
-                nextCommand = os.read(childRead, 10)
+                # we should ensure this is exactly 4 bits to prevent the possibility where the parent writes. 
+                # To the pipe faster than child reads. Means instead of "reset" must sent "rset"
+                nextCommand = os.read(childRead, 4)
                 nextCommand = nextCommand.decode()
                 # if the parent wants us to reset, we gotta do that
-                if(nextCommand == "reset"):
-                    print("restarting at least once!")
+                if(nextCommand == "rset"):
                     break
                 # else, we assume its a motor movement command
                 else:
-                    print("command is : " + nextCommand)
-                    print("now getting input for an esp!")
                     # we don't really care yet about if it succeeded or not
                     formattedInput = getKeysFromNumbers(nextCommand)
                     if(formattedInput != ""):
@@ -137,6 +139,11 @@ for i in range(numPlayers):
     
 # parent runs this
 print("Parent finished creating its beautiful ESP children!")
+
+# now open up the shared memory, or create it
+timerFile = os.open(timerSharedMemory, os.O_CREAT | os.O_RDWR)
+memLocation = mmap.mmap(timerFile, 1)
+memLocation[:1] = bytes([50])
 
 # loop restarts after each match
 while(True):
@@ -162,7 +169,7 @@ while(True):
         if(espReady == "no"):
             # now for each of the children, reset them back to their starting points
             for i in range(numPlayers):
-                os.write(parentPipes[i][1], b"reset")
+                os.write(parentPipes[i][1], b"rset")
             continue
     else:
         print("esp manager expected ready check, got this instead: " + readyCheck)
@@ -170,14 +177,13 @@ while(True):
         continue
     # now, game starts!
     
-    while(True):
+    while(memLocation[0] != 0):
         #here, briefly check the time
 
         #next, get controller data, and send it
         try:
             movementData = controlConn.recv(6)
             movementData = movementData.decode()
-            print("move data: " + movementData)
             # first one sent is the id
             playerId = int(movementData[0])
             # for now since only one esp
@@ -188,6 +194,7 @@ while(True):
         # no big deal if we don't get data in that time
         except socket.timeout:
             print("")
+    print("Game over!")
 
 
 #stuff to do when finishing. first, wait for all children to die off like the pathetic saps they are
