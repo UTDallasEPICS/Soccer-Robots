@@ -8,7 +8,7 @@ import mmap
 # from backupTag import runTrakcer
 
 #HOST = 'localhost'
-HOST = '192.168.134.90'
+HOST = '192.168.250.90'
 PORT = 1234
 
 espSocketPath = "/tmp/gmESPSocket"
@@ -22,18 +22,19 @@ def getTime():
     return game_time
 runBackTracking = False
 
+#before communicating with the esp, to prevent race conditions first allocate sharemd memory.
+timerFile = os.open(sharedMemory, os.O_CREAT | os.O_RDWR)
+os.ftruncate(timerFile, 1)
+memLocation = mmap.mmap(timerFile, 1)
+
+# connect with esp now
+espSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+espSocket.connect(espSocketPath)
+print("connected to esp manager!")
+
+
 async def serverGM(websocket, path):
     # first time connecting from website, as placeholder say that webiste "sends" the number of players to the esp
-
-    #before communicating with the esp, to prevent race conditions first allocate sharemd memory.
-    timerFile = os.open(sharedMemory, os.O_CREAT | os.O_RDWR)
-    os.ftruncate(timerFile, 1)
-    memLocation = mmap.mmap(timerFile, 1)
-
-    # connect with esp now
-    espSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    espSocket.connect(espSocketPath)
-    print("connected to esp manager!")
 
     espSocket.sendall(num_players.to_bytes(1, "little")) 
     while True:
@@ -74,6 +75,9 @@ async def serverGM(websocket, path):
 
         received_data = await websocket.recv()
         received = json.loads(received_data)    
+
+        if(isinstance(received, str)):
+            print("bruh it's a string! Its value is: " + received)
         print(received["payload"], type(received["payload"]))
         game_time = received["payload"]["timer"]
         print("\nTimer:")

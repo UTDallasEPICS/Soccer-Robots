@@ -28,7 +28,7 @@ class ESPClient:
 
     def send(self, msg):
         try:
-            self.sock.send(bytes(msg + "|", 'utf-8'))
+            self.sock.sendall(bytes(msg + "|", 'utf-8'))
             return True
         except socket.error:
             self.connectStatus = False

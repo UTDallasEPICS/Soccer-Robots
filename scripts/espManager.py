@@ -9,7 +9,7 @@ socketToControl = "/tmp/controlESPSocket"
 timerSharedMemory = "/tmp/shared_timer"
 
 espAddrs = {}
-espAddrs["esp0"] = "192.168.134.176"
+espAddrs["esp0"] = "192.168.250.248"
 espAddrs["esp1"] = "idk"
 espAddrs["esp2"] = "idk"
 espAddrs["esp2"] = "idk"
@@ -78,9 +78,7 @@ for i in range(numPlayers):
         controlServer.close()
         gmServer.close()
 
-        connection = ESPClient(espAddrs["esp" + str(i)], 30000)
         # 2 is the number of seconds to wait to connect
-        espConnected = connection.tryConnect(2)
         print("we made a esp that will communicate with esp #" + str(i) + "!")
 
         # loop restarts at end of each match
@@ -89,11 +87,13 @@ for i in range(numPlayers):
             readyCheck = os.read(childRead, 6)
             readyCheck = readyCheck.decode()
             if(readyCheck == "ready?"):
-                # if disconnected, try to reconnection one more time
-                if(not espConnected):
-                    espConnected = connection.tryConnect(2)
+                # first set up initialization. Note that each time we have to create a new socket again to target the ESP.
+                connection = ESPClient(espAddrs["esp" + str(i)], 30000)
+                # if disconnected, check connection status again.
+                espConnected = connection.tryConnect(2)
                 # if still disconnected, say it failed connection
                 if(not espConnected):
+                    connection = ESPClient(espAddrs["esp" + str(i)], 30000)
                     print("Esp #" + str(i) + " has failed connection again! fraud")
                     os.write(childWrite, b"no")
                 #else if connected that's nice. now, send request if its ready to the esp 
@@ -145,10 +145,12 @@ print("Parent finished creating its beautiful ESP children!")
 # now open up the shared memory, or create it
 timerFile = os.open(timerSharedMemory, os.O_CREAT | os.O_RDWR)
 memLocation = mmap.mmap(timerFile, 1)
-memLocation[:1] = bytes([50])
 
 # loop restarts after each match
 while(True):
+    # resets mem location shared memory at the start of each match. We want to reset it from 0 back to 50 when we starting a new match, else
+    # this process will always think it's time for game over
+    memLocation[:1] = bytes([50])
     # wait for input
     readyCheck = gmConn.recv(6)
     readyCheck = readyCheck.decode()

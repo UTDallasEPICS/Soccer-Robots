@@ -10,17 +10,18 @@ def on_publish(client, userdata, mid):
     print("Published to esp32")
 
 #HOST = 'localhost'
-HOST = '192.168.134.90'
+HOST = '192.168.250.90'
 PORT = 1235
 
 controlSocketPath = "/tmp/controlESPSocket"
+
+controlSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+controlSocket.connect(controlSocketPath)
 
 
 async def serverCM(websocket, path):
     print("inside CM")
 
-    controlSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    controlSocket.connect(controlSocketPath)
     print("connected to esp!")
 
     while True:
