@@ -486,7 +486,7 @@ void taskServer(void *pvParameters){
         shutdown(sock, 0);
 
 		//before finishing the movement task, spin until it's done.
-		while(finishedMoving != false)
+		while(finishedMoving != true)
 		{
 			ESP_LOGI("WAIT", "Waiting!");
 		}

@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "EPICS_soccer-robot",
-    "project_version":    "f1df2a5-dirty",
+    "project_version":    "dbfb97e-dirty",
     "project_path":       "C:/Users/mahd/Documents/SoccerRobotsESP32",
     "idf_path":           "C:/Users/mahd/esp/v5.4/esp-idf",
     "build_dir":          "C:/Users/mahd/Documents/SoccerRobotsESP32/build",
