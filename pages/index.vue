@@ -1,13 +1,11 @@
 <!--The main file for the page, that has embedded in it all the UI components from the components folder.-->
 <template>
-  <div class="flex flex-col">
+  <div class="overflow-hidden">
     <div>
-      <TopNavBar></TopNavBar>
-      <BottomNavBar></BottomNavBar>
+      <BottomNavBar>  </BottomNavBar>
     </div>
     <div class="flex justify-center py-6">
       <div class="flex flex-col">
-        <!--sets up the scoreboard by passing in the timer variables, user1 and user2 variables, and the score variables.-->
         <Scoreboard :timer="Number(timer ?? 0)" :user1="player1?.username ?? ''" :user2="player2?.username ?? ''" :user1score="player1?.score ?? 0" :user2score="player2?.score ?? 0"></Scoreboard>
         <span class="py-4 pr-6">
                     <VideoStream></VideoStream>
@@ -86,55 +84,48 @@ const joinQueue = () => {
     //else if match starting, send password for the client in the match and make it a part of its cookie so they can return to the match.
     else if(type === "MATCH_START"){
       confirmationRequest.value = false
-      stillNeedsResponse.value = false
       accesspassword.value = payload
       document.cookie = "accesspassword=" + accesspassword.value
-      //Creating a new websocket with the controller that is used to send inputs.
       ws_controller.value = new WebSocket(`ws://${useRuntimeConfig().public.LOCALHOST}:${useRuntimeConfig().public.PORT_WSS_CONTROLLER_CLIENT}`)
-      //when controller is open and created.
+      
       ws_controller.value.onopen = (event) => {
-        //initialize mapping of what inputs are pressed
         const wasdMapping: { [key: string]: number, "w": number, "a": number, "s": number, "d": number } = {"w": 0, "a": 0, "s": 0, "d": 0}
-        
-        //sets the key that was released back to 0 with the event. uses dictionary mapping, as event.key can return "w", "a", "s", or "d"
         const updateKeyUp = (event: KeyboardEvent) => {
+        
           if(wasdMapping.hasOwnProperty(event.key)){
             wasdMapping[event.key] = 0
+            keyInputs()
           }
         }
-
-        //sets the key that was pressed to 1 with dictionary mapping.
+        
         const updateKeyDown = (event: KeyboardEvent) => {
-          if(wasdMapping.hasOwnProperty(event.key)){
+          if(event.repeat){
+            console.log("repeating")
+          }
+          else if(wasdMapping.hasOwnProperty(event.key)){
             wasdMapping[event.key] = 1
+            keyInputs()
+
           }
         }
-
-        //listen on even for when a key is pressed or release, and if so call the function and pass in the event with the appropriate key.
         window.addEventListener("keyup", updateKeyUp)
         window.addEventListener("keydown", updateKeyDown)
-        //runs the following function every 100 milliseconds
-        const keyInputs = setInterval(() => {
-          //if you have a connection with the game controller:
-          if(ws_controller.value?.OPEN)
-          {
-            //the message being sent is 4 digit payload, corresponding to w, a, s, and d.
+        const keyInputs = () => {
+          if(ws_controller.value?.OPEN){
+
             const message = {
               type: "KEY_INPUT",
               payload: "" + wasdMapping["w"] + wasdMapping["a"] + wasdMapping["s"] + wasdMapping["d"]
             }
-            //send pressed keys to backend
+            console.log("keyinput")
+
             ws_controller.value.send(JSON.stringify(message))
           }
-          //if no connection with the game controller
           else{
-            //stops the keyInputs function from looping
-            clearInterval(keyInputs)
-            //remove events as if not sending them, not needed
             window.removeEventListener("keyup", updateKeyUp)
             window.removeEventListener("keydown", updateKeyDown)
           }
-        }, 100)
+        }
       }
     }
   }

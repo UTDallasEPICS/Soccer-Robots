@@ -1,13 +1,11 @@
 <!-- this mini-page is used when either setting your username for the first time OR changing your username-->
 <template>
-  <div class="fixed w-full h-full inset-0 backdrop-blur bg-black bg-opacity-25 flex" style="z-index: 2;">
-    <div class="rounded-lg p-2 bg-white border-black border-2" style="margin: auto; width: 35%; height: 75%;">
-      <!-- Only give them the option to exit out if they're changing their username -->
+  <div class="fixed w-full h-full inset-0 bg-opacity-20 backdrop-blur-sm flex" style="z-index: 2;">
+    <div class="rounded-lg p-2 bg-white border-black border-2" style="margin: auto; width: 35%; height: 45%;">
       <div class="w-min h-min text-black" style="margin-left: auto;" v-if="props.isChangingUsername">
           <p @click="emitClose" class="cursor-pointer">X</p>
       </div>
-      <p class="text-black font-black text-lg text-center" style="font-family: Inter; color: #154734; margin-top: 10%; margin-bottom: 3%;">Set Username</p>
-      <!--On submit of input, call handleSubmit but don't refresh the page.-->
+      <p class="text-black font-black text-lg text-center" style="font-family: Inter; color: #154734; margin-top: 10%; margin-bottom: 11%;">Set Username</p>
       <form @submit.prevent="handleSubmit">
         <label class="font-semibold text-lg block" style="font-family: Inter; color: #777070;margin-left:14.5%; letter-spacing: 1.5px;">USERNAME</label>
         <p class="text-red-600 ml-16 mt-2">{{ mssg }}</p>
