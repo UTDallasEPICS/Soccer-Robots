@@ -42,7 +42,7 @@
 #define LEDC_TIMER				LEDC_TIMER_0
 #define LEDC_FREQUENCY  454 // Frequency in Hertz. Set frequency at 4 kHz
 
-#define LEDC_OUTPUT_IO1	16 // Define the output GPIO
+#define LEDC_OUTPUT_IO1	16// Define the output GPIO
 #define LEDC_OUTPUT_IO2	18 // Define the output GPIO
 
 #define LEDC_CHANNEL1            LEDC_CHANNEL_0
@@ -637,6 +637,9 @@ void app_main() {
 
 	vTaskDelay(pdMS_TO_TICKS(500));
 
+	currentDirection[0] = 90;	
+	move();
+
 	// while(true)
 	// {
 	// 	for(int i = -100; i <= 100; i++)
@@ -647,18 +650,18 @@ void app_main() {
 	// 	}
 	// }
 
-	vTaskDelay(pdMS_TO_TICKS(3000));
-	if (wifi_setup_init()){
-		/* xTaskCreate( */
-		/* 		taskClient, */
-		/* 		"taskClient", */
-		/* 		8192,			// Stack Size */
-		/* 		NULL,			// Parameters */
-		/* 		1,				// Priority */
-		/* 		NULL //handle to delete task
-		); */
-		xTaskCreate(taskServer, "taskServer", 4096, (void*)AF_INET, 5, NULL);
-	}
+	// vTaskDelay(pdMS_TO_TICKS(3000));
+	// if (wifi_setup_init()){
+	// 	/* xTaskCreate( */
+	// 	/* 		taskClient, */
+	// 	/* 		"taskClient", */
+	// 	/* 		8192,			// Stack Size */
+	// 	/* 		NULL,			// Parameters */
+	// 	/* 		1,				// Priority */
+	// 	/* 		NULL //handle to delete task
+	// 	); */
+	// 	xTaskCreate(taskServer, "taskServer", 4096, (void*)AF_INET, 5, NULL);
+	// }
 
-	vTaskDelay(pdMS_TO_TICKS(500));
+	// vTaskDelay(pdMS_TO_TICKS(500));
 }
