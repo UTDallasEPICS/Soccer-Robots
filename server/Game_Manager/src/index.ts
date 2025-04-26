@@ -78,7 +78,7 @@ const gameCycle = setInterval( async () => {
                 ws_raspberry.send(JSON.stringify({
                     "type": "CHECK_READY",
                     "payload": ""
-                }))
+                }))   
             }
         }
     }
