@@ -48,6 +48,11 @@ const matchSettings = async () => {
     //getting timer duration and numplayers from the matchsettings. if unable to find match length, set to default.
     timer_duration = response?.matchLength as unknown as number ? response?.matchLength as unknown as number : parseInt(`${process.env.TIMER_DURATION}`)
     numPlayers = response?.numPlayers as unknown as number
+    //if undefined, set it to default as 1v1, so 2 players
+    if(numPlayers == undefined)
+    {
+        numPlayers = 2
+    }
 
 }
 
@@ -83,8 +88,12 @@ const gameCycle = setInterval( async () => {
                     "payload": ""
                 }))   
             }
-
-
+        }
+        else
+        {
+            console.log("First part: " + queue.length)
+            console.log("second part: " + numPlayers * 2)
+            console.log("uhh... davinki?")
         }
     }
     //else if currently confirming
