@@ -40,7 +40,7 @@
 #define LEDC_MODE               LEDC_LOW_SPEED_MODE
 #define LEDC_DUTY_RES           LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
 #define LEDC_TIMER				LEDC_TIMER_0
-#define LEDC_FREQUENCY  454 // Frequency in Hertz. Set frequency at 4 kHz
+#define LEDC_FREQUENCY  350 // Frequency in Hertz. Set frequency at 4 kHz
 
 #define LEDC_OUTPUT_IO1	16// Define the output GPIO
 #define LEDC_OUTPUT_IO2	18 // Define the output GPIO
@@ -596,17 +596,20 @@ void move(){
 	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromBaseDirection(currentDirection[1])));
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
 
-	//("DUTY CHECK", "Right Duty is: %lu", ledc_get_duty(LEDC_MODE, LEDC_CHANNEL2));
+	//ACTUAL DUTIES ARE: 56-89 FOR FORWARD (INCLUSIVE)
+	//AND THEN REVERSE IS 16 TO 49 FOR REVERSE (INCLUSIVE), 16 IS FASTER THAN 49
 
-	// Pulse of : 800 - 1100 uS (Reverse)
-	// Pulse of : 1900 - 2200 uS (Forward)
+}
 
-	// Frequency of 454 Hz = Period of 2202 uS
-	// 793 uS = 36
-	// 1100 uS = 50
-	//
-	// 1894 uS = 86
-	// 2202 uS = 100
+void move2(int dooty)
+{
+	//Move the left motor
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, dooty / 100.0 * pow(2, LEDC_DUTY_RES)));
+	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
+
+	//Move the right motor
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2,  dooty / 100.0 * pow(2, LEDC_DUTY_RES)));
+	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));	
 }
 
 void doBlink()
@@ -626,19 +629,40 @@ void app_main() {
 	waitForData = xSemaphoreCreateBinary();
 	timer_init(TIMER_GROUP_0, TIMER_0, &config);
 	//THESE ARE THE RAW DUTIES
-	lowerReverseBound = floor(convertPulseWidthToPercentDuty(800));
-	upperReverseBound = ceil(convertPulseWidthToPercentDuty(1100));
-	lowerForwardBound = floor(convertPulseWidthToPercentDuty(1900));
-	ESP_LOGI("BOUNDS", "Lower bound to reverse motor: %d, upper bound to reverse motor: %d, lower bound to push motor forward: %d", lowerReverseBound, upperReverseBound, lowerForwardBound);
-
 	ledc_setup();
 	
 	doBlink();
 
-	vTaskDelay(pdMS_TO_TICKS(500));
+	vTaskDelay(pdMS_TO_TICKS(5000));
 
-	currentDirection[0] = 90;	
-	move();
+	for(int i = 25; i >= 15; i--)
+	{
+		move2(i);
+		vTaskDelay(pdMS_TO_TICKS(75));
+	}	
+
+	//REVERSE IS 5 TO 14, 5 IS FASTER THAN 14
+	//FORWARD IS: 16 TO 25
+
+	for(int i = 15; i >= 5; i--)
+	{
+		move2(i);
+		vTaskDelay(pdMS_TO_TICKS(75));
+	}
+		
+	ESP_LOGI("GRAHH", "Right now at max and paused!");
+	gpio_set_level(BLINK_GPIO, 0);
+	vTaskDelay(pdMS_TO_TICKS(3000));
+	ESP_LOGI("GRAHH", "Ending pause!");
+	gpio_set_level(BLINK_GPIO, 1);
+	for(int i = 5; i <= 15; i++)
+	{
+		move2(i);
+		vTaskDelay(pdMS_TO_TICKS(75));
+	}
+
+	// currentDirection[0] = 90;	
+	// move();
 
 	// while(true)
 	// {
