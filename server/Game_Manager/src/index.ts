@@ -48,10 +48,10 @@ const matchSettings = async () => {
     //getting timer duration and numplayers from the matchsettings. if unable to find match length, set to default.
     timer_duration = response?.matchLength as unknown as number ? response?.matchLength as unknown as number : parseInt(`${process.env.TIMER_DURATION}`)
     numPlayers = response?.numPlayers as unknown as number
-    //if undefined, set it to default as 1v1, so 2 players
+    //if undefined, set it to default as 1v1
     if(numPlayers == undefined)
     {
-        numPlayers = 2
+        numPlayers = 1
     }
 
 }
@@ -100,7 +100,9 @@ const gameCycle = setInterval( async () => {
     else if(game_state == GAME_STATE.SEND_CONFIRM){
         // Check if received 2 confirmation response
         // Check if received confirmation responses
-        if(confirmation_timer == 0){ // time's up
+        if(confirmation_timer == 0)
+        { 
+            // time's up
             let numAccepted = 0
 
             for(let i = 0; i < players.length; i++){
@@ -110,7 +112,8 @@ const gameCycle = setInterval( async () => {
             }
 
             //checks if the amount of accepted players is equal to total number of players
-            if(numAccepted = numPlayers*2){
+            if(numAccepted = numPlayers*2)
+            {
 
                 game_state = GAME_STATE.PLAYING
                 CONTROLLER_ACCESS = nanoid() // new access code for each game
@@ -159,42 +162,42 @@ const gameCycle = setInterval( async () => {
                     "payload": {"timer": timer_duration}
                 }))
             }
-
-        }
-        else{ // did not get all accepts
-
-            // signal players to reset confirmation 
-            for(let i = 0; i < players.length; i++){
-                queue[i]["ws"].send(JSON.stringify({
-                    "type": "MATCH_CONFIRMATION_RESET",
-                    "payload": ""
-                }))
-            }
-
-
-            let declinedArray = []
-            // find the player(s) that declined/did not respond and remove from queue/close ws connection
-            for(let i = 0; i < players.length; i++){
-                let index = players.findIndex((element) => { return element["username"] === queue[i]["username"]})
-                if(index == -1 || players[index]["accepted"] === false){
-                    queue[i]["ws"].close()
-                    declinedArray.push(queue[i]["user_id"])
+            else
+            { // did not get all accepts
+    
+                // signal players to reset confirmation 
+                for(let i = 0; i < players.length; i++){
+                    queue[i]["ws"].send(JSON.stringify({
+                        "type": "MATCH_CONFIRMATION_RESET",
+                        "payload": ""
+                    }))
                 }
-            }
-
-            //Remove players from queue
-            let num = queue.length
-            for(let j = 0; j < declinedArray.length; j++){
-                let ID = declinedArray[j]
-                for(let m = 0; m < num; m++){
-                    if(queue[m]["user_id"] === ID){
-                        queue.splice(m, 1)
-                        num--
+    
+    
+                let declinedArray = []
+                // find the player(s) that declined/did not respond and remove from queue/close ws connection
+                for(let i = 0; i < players.length; i++){
+                    let index = players.findIndex((element) => { return element["username"] === queue[i]["username"]})
+                    if(index == -1 || players[index]["accepted"] === false){
+                        queue[i]["ws"].close()
+                        declinedArray.push(queue[i]["user_id"])
                     }
                 }
-            }
-            game_state = GAME_STATE.NOT_PLAYING
-            players.splice(0, players.length) // clear players array
+    
+                //Remove players from queue
+                let num = queue.length
+                for(let j = 0; j < declinedArray.length; j++){
+                    let ID = declinedArray[j]
+                    for(let m = 0; m < num; m++){
+                        if(queue[m]["user_id"] === ID){
+                            queue.splice(m, 1)
+                            num--
+                        }
+                    }
+                }
+                game_state = GAME_STATE.NOT_PLAYING
+                players.splice(0, players.length) // clear players array
+            }    
         }
         confirmation_timer--
     }
