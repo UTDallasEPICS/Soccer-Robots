@@ -76,9 +76,10 @@ static bool charging;
 static bool inGame;
 static bool resetting;
 
-static uint8_t lowerReverseBound = 0;
-static uint8_t upperReverseBound = 0;
-static uint8_t lowerForwardBound = 0;
+static uint8_t lowerReverseBound = 16;
+static uint8_t upperReverseBound = 49;
+static uint8_t lowerForwardBound = 56;
+static uint8_t upperForwardBound = 89;
 
 TaskHandle_t doMovementHandle = NULL;
 bool finishedMoving = false;
@@ -521,21 +522,24 @@ float getRawDutyFromBaseDirection(float duty)
 	uint8_t range = upperReverseBound - lowerReverseBound;
 	if(duty > 0.1)
 	{
-		//works as we first limit it to the range 0 to 14 by dividing by (100/range).
-		duty = duty / (100.0 / range);
-		//Then, add 86 to put it in the range 86-100
+		//works as we first limit it to the range 0 to 33 by dividing by 100 to get it between 0 and 1, then multiplying by 33.
+		duty /= 100.0;
+		duty *= range;
+		//Then, add 86 to put it in the range 56-89
 		duty += lowerForwardBound;
 	}
 	else if(duty < -0.1)
 	{
-		//first limit it to the range -14 to 0  by dividing by (100 / range)
-		duty = duty / (100.0 / range);
-		//Then, add 14 to it to put it in the range 0-14, then add 36 to put in range 36-50
-		duty += lowerReverseBound + range;
+		//first limit it to the range -1 to 0  by dividing by (100 / range)
+		duty /= 100.0;
+		//then put it in the range -33 to 0 by multiplying by range
+		duty *= range;
+		//now, add 33 to put it in the range 0 and 33, and then add 16 to put it in the range 16 to 49
+		duty += range + lowerReverseBound;
 	}
 	else
 	{
-		duty = 0;
+		duty = 53;
 	}
 	return getRawDutyFromPercent(duty);
 }
@@ -585,6 +589,15 @@ static void ledc_setup(){
 		.hpoint = 0
 	};
 	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf2));
+
+	uint8_t startPos = 50;
+	//Move the left motor to start position
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, startPos / 100.0 * pow(2, LEDC_DUTY_RES)));
+	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
+
+	//Move the right motor
+	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2,  startPos / 100.0 * pow(2, LEDC_DUTY_RES)));
+	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));		
 }
 
 void move(){
@@ -597,19 +610,8 @@ void move(){
 	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
 
 	//ACTUAL DUTIES ARE: 56-89 FOR FORWARD (INCLUSIVE)
-	//AND THEN REVERSE IS 16 TO 49 FOR REVERSE (INCLUSIVE), 16 IS FASTER THAN 49
+	//AND THEN 16 TO 49 FOR REVERSE (INCLUSIVE), 16 IS FASTER THAN 49
 
-}
-
-void move2(int dooty)
-{
-	//Move the left motor
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, dooty / 100.0 * pow(2, LEDC_DUTY_RES)));
-	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
-
-	//Move the right motor
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2,  dooty / 100.0 * pow(2, LEDC_DUTY_RES)));
-	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));	
 }
 
 void doBlink()
@@ -628,64 +630,24 @@ void app_main() {
 	resetting = false;
 	waitForData = xSemaphoreCreateBinary();
 	timer_init(TIMER_GROUP_0, TIMER_0, &config);
-	//THESE ARE THE RAW DUTIES
 	ledc_setup();
 	
 	doBlink();
 
-	vTaskDelay(pdMS_TO_TICKS(5000));
+	vTaskDelay(pdMS_TO_TICKS(1000));
 
-	for(int i = 25; i >= 15; i--)
-	{
-		move2(i);
-		vTaskDelay(pdMS_TO_TICKS(75));
-	}	
-
-	//REVERSE IS 5 TO 14, 5 IS FASTER THAN 14
-	//FORWARD IS: 16 TO 25
-
-	for(int i = 15; i >= 5; i--)
-	{
-		move2(i);
-		vTaskDelay(pdMS_TO_TICKS(75));
-	}
-		
-	ESP_LOGI("GRAHH", "Right now at max and paused!");
-	gpio_set_level(BLINK_GPIO, 0);
 	vTaskDelay(pdMS_TO_TICKS(3000));
-	ESP_LOGI("GRAHH", "Ending pause!");
-	gpio_set_level(BLINK_GPIO, 1);
-	for(int i = 5; i <= 15; i++)
-	{
-		move2(i);
-		vTaskDelay(pdMS_TO_TICKS(75));
+	if (wifi_setup_init()){
+		/* xTaskCreate( */
+		/* 		taskClient, */
+		/* 		"taskClient", */
+		/* 		8192,			// Stack Size */
+		/* 		NULL,			// Parameters */
+		/* 		1,				// Priority */
+		/* 		NULL //handle to delete task
+		); */
+		xTaskCreate(taskServer, "taskServer", 4096, (void*)AF_INET, 5, NULL);
 	}
 
-	// currentDirection[0] = 90;	
-	// move();
-
-	// while(true)
-	// {
-	// 	for(int i = -100; i <= 100; i++)
-	// 	{
-	// 		currentDirection[0] = i;	
-	// 		move();
-	// 		vTaskDelay(pdMS_TO_TICKS(10));
-	// 	}
-	// }
-
-	// vTaskDelay(pdMS_TO_TICKS(3000));
-	// if (wifi_setup_init()){
-	// 	/* xTaskCreate( */
-	// 	/* 		taskClient, */
-	// 	/* 		"taskClient", */
-	// 	/* 		8192,			// Stack Size */
-	// 	/* 		NULL,			// Parameters */
-	// 	/* 		1,				// Priority */
-	// 	/* 		NULL //handle to delete task
-	// 	); */
-	// 	xTaskCreate(taskServer, "taskServer", 4096, (void*)AF_INET, 5, NULL);
-	// }
-
-	// vTaskDelay(pdMS_TO_TICKS(500));
+	vTaskDelay(pdMS_TO_TICKS(500));
 }
