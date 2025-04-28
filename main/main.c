@@ -363,7 +363,10 @@ static void on_receive(const int sock)
 			if(len >= 5 && strncmp(rx_buffer, "reset", 5) == 0)
 			{
 				inGame = false;
-				interruptMovement = false;
+				finishedMoving = false;
+				interruptMovement = true;
+				//set movement drive to zero
+				setMoveStruct((char*) "z", 1);
 				//for now, we can probably just break our esp out of this on receive, that will also destroy the movement task. Though, that's only after we finish moving.
 				break;
 			}
