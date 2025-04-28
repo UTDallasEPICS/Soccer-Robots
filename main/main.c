@@ -251,6 +251,7 @@ void doMovement(void *pvParameters)
 	//always running while connected
 	while(true)
 	{
+		interruptMovement = false;
 		//assume when we start, we begin moving
 		beginMoving();
 		//this is the look to move the new target
@@ -363,10 +364,12 @@ static void on_receive(const int sock)
 			if(len >= 5 && strncmp(rx_buffer, "reset", 5) == 0)
 			{
 				inGame = false;
+				setMoveStruct((char*) "z", 1);
 				finishedMoving = false;
 				interruptMovement = true;
+				xSemaphoreGive(waitForData);
+
 				//set movement drive to zero
-				setMoveStruct((char*) "z", 1);
 				//for now, we can probably just break our esp out of this on receive, that will also destroy the movement task. Though, that's only after we finish moving.
 				break;
 			}
@@ -378,29 +381,29 @@ static void on_receive(const int sock)
 			}
             ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
 			setMoveStruct(rx_buffer, len);
-			//when data received and movement is blocking, activate semaphore to tell it to move now
-			if(finishedMoving)
-			{
-				xSemaphoreGive(waitForData);
-			}
-			//if we were already moving to the previous target, set this to true to let program know we need to move differently now
-			else
+			//if we were already moving, want to now tell the esp that we're gonna interrupt now.
+			if(!finishedMoving)
 			{
 				interruptMovement = true;
 			}
-
+			//always give semaphore, as it's a possible race condition still that we mmight interrupt movement and then in our movement task before
+			//we do the break we stop moving.
+			xSemaphoreGive(waitForData);
             // send() can return less bytes than supplied length.
             // Walk-around for robust implementation.
-            int to_write = len;
-            while (to_write > 0) {
-                int written = send(sock, rx_buffer + (len - to_write), to_write, 0);
-                if (written < 0) {
-                    ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-                    // Failed to retransmit, giving up
-                    return;
-                }
-                to_write -= written;
-            }
+            
+			//i think for now we don't really need to send back to the raspberry pi. Maybe change this later
+
+			// int to_write = len;
+            // while (to_write > 0) {
+            //     int written = send(sock, rx_buffer + (len - to_write), to_write, 0);
+            //     if (written < 0) {
+            //         ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+            //         // Failed to retransmit, giving up
+            //         return;
+            //     }
+            //     to_write -= written;
+            // }
         }
     } while (len > 0);
 }
@@ -523,7 +526,7 @@ float getRawDutyFromBaseDirection(float duty)
 {
 	//if duty is positive, remember valid values are from 86 - 100. If negative, from 36-50
 	uint8_t range = upperReverseBound - lowerReverseBound;
-	if(duty > 0.1)
+	if(duty > 0.25)
 	{
 		//works as we first limit it to the range 0 to 33 by dividing by 100 to get it between 0 and 1, then multiplying by 33.
 		duty /= 100.0;
@@ -531,7 +534,7 @@ float getRawDutyFromBaseDirection(float duty)
 		//Then, add 86 to put it in the range 56-89
 		duty += lowerForwardBound;
 	}
-	else if(duty < -0.1)
+	else if(duty < -0.25)
 	{
 		//first limit it to the range -1 to 0  by dividing by (100 / range)
 		duty /= 100.0;
