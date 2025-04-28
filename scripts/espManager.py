@@ -9,7 +9,7 @@ socketToControl = "/tmp/controlESPSocket"
 timerSharedMemory = "/tmp/shared_timer"
 
 espAddrs = {}
-espAddrs["esp0"] = "192.168.250.248"
+espAddrs["esp0"] = "192.168.250.158"
 espAddrs["esp1"] = "idk"
 espAddrs["esp2"] = "idk"
 espAddrs["esp2"] = "idk"
@@ -126,6 +126,9 @@ for i in range(numPlayers):
                     formattedInput = getKeysFromNumbers(nextCommand)
                     if(formattedInput != ""):
                         connection.send(formattedInput)
+                    # z represents that no movement
+                    else:
+                        connection.send("z")
             
 
         os.close(childWrite)
