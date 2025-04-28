@@ -122,7 +122,7 @@ const gameCycle = setInterval( async () => {
                 for(let i = 0; i < players.length; i++){
                     let newPlayer = {
                         user_id: players[i]["user_id"],
-                        playernumber: i+1
+                        playernumber: i
                     }
                     currentPlayers.push(newPlayer)
                 }
