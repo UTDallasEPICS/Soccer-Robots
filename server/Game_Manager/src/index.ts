@@ -53,6 +53,11 @@ const matchSettings = async () => {
     {
         numPlayers = 1
     }
+    //there we go
+    if(timer_duration == undefined)
+    {
+        timer_duration = 30
+    }
 
 }
 
@@ -88,12 +93,6 @@ const gameCycle = setInterval( async () => {
                     "payload": ""
                 }))   
             }
-        }
-        else
-        {
-            console.log("First part: " + queue.length)
-            console.log("second part: " + numPlayers * 2)
-            console.log("uhh... davinki?")
         }
     }
     //else if currently confirming
@@ -142,6 +141,13 @@ const gameCycle = setInterval( async () => {
                     body: JSON.stringify(currentPlayers)
                 })
 
+                for(let i = 0; i < currentPlayers.length; i++){
+                    if(queue[i] == null)
+                    {
+                        console.log("ok dawg its undefed at index " + i)
+                    }
+                }
+
                 // give players the access code to connect to Controller server WebSocket
                 for(let i = 0; i < currentPlayers.length; i++){
                     queue[i].ws.send(JSON.stringify({
@@ -156,6 +162,7 @@ const gameCycle = setInterval( async () => {
                 queue.splice(0, currentPlayers.length)
                 timer = timer_duration
 
+                console.log("Timer duration: " + timer_duration)
                 // tell Raspberry server to start the game
                 ws_raspberry.send(JSON.stringify({
                     "type": "GAME_START",
@@ -219,9 +226,6 @@ const gameCycle = setInterval( async () => {
             body: JSON.stringify({ "users": [  {"user_id": players[0]["user_id"]}, 
                                     {"user_id": players[1]["user_id"]}] })
         })
-
-
-        
 
         // store played match in database
         await prisma.match.create({
@@ -346,6 +350,8 @@ const gameCycle = setInterval( async () => {
         }
         //remove them from the player queue
         players.splice(0, 2)
+        //makes it so now there's no players curerntlyl anymore
+        currentPlayers.length = 0
         //now that game just ended robots are not ready until the raspberry pi says so.
         robots_ready = false
         timer = 0
