@@ -18,6 +18,8 @@ controlSocketPath = "/tmp/controlESPSocket"
 controlSocket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 controlSocket.connect(controlSocketPath)
 
+# first element is for player 0, 2nd element is for play 1
+prevData = ["0000", "0000"]
 
 async def serverCM(websocket, path):
     print("inside CM")
@@ -28,18 +30,12 @@ async def serverCM(websocket, path):
         received_data = await websocket.recv()
         received = json.loads(received_data)
         if received["type"] == "KEY_INPUT":
-            if received["payload"]["playernumber"] == 0:
-                if received["payload"]["keys"] != "0000":
-                    # currInput = int(received["payload"]["keys"], 2)
-                    # print("Player One Input (decimal): " + str(currInput))
-                    print("Player One Input (bits): " + received["payload"]["keys"])
-            if received["payload"]["playernumber"] == 1:
-                if received["payload"]["keys"] != "0000":
-                    # currInput = int(received["payload"]["keys"], 2)
-                    # print("Player Two Input (decimal): " + str(currInput))
-                    print("Player Two Input (bits): " + received["payload"]["keys"])
-            sentData = str(received["payload"]["playernumber"]) + "|" + received["payload"]["keys"]
-            controlSocket.sendall(sentData.encode())
+            playerNum = received["payload"]["playernumber"]
+            if(prevData[playerNum] != received["payload"]["keys"]):
+                print("Player " + str(playerNum) + " Input (bits): " + received["payload"]["keys"])
+                sentData = str(playerNum) + "|" + received["payload"]["keys"]
+                controlSocket.sendall(sentData.encode())
+                prevData[playerNum] = received["payload"]["keys"]
 
 
 start_server = websockets.serve(serverCM, HOST, PORT)
