@@ -42,8 +42,9 @@
 #define LEDC_TIMER				LEDC_TIMER_0
 #define LEDC_FREQUENCY  350 // Frequency in Hertz. Set frequency at 4 kHz
 
-#define LEDC_OUTPUT_IO1	16// Define the output GPIO
-#define LEDC_OUTPUT_IO2	18 // Define the output GPIO
+//YELLOW IS LEFT MOTOR, WHITE IS RIGHT MOTOR
+#define LEDC_OUTPUT_IO1	18// Define the output GPIO
+#define LEDC_OUTPUT_IO2	16 // Define the output GPIO
 
 #define LEDC_CHANNEL1            LEDC_CHANNEL_0
 #define LEDC_CHANNEL2            LEDC_CHANNEL_1
@@ -287,7 +288,9 @@ void doMovement(void *pvParameters)
 		}
 		//wait until new data is sent after we've reached our target
 		finishedMoving = true;
+		ESP_LOGI("SNOOZE", "Snoozing until new data!");
 		xSemaphoreTake(waitForData, portMAX_DELAY);
+		ESP_LOGI("SNOOZE", "LOCK IN, got new data!");
 	}
 }
 
@@ -356,7 +359,7 @@ static void on_receive(const int sock)
 					//send ready
 					sendMessage(sock, "ready");
 					inGame = true;
-					xTaskCreate(doMovement, "doMovement", 8192, NULL, 4, &doMovementHandle);
+					xTaskCreate(doMovement, "doMovement", 8192, NULL, 5, &doMovementHandle);
 				}
 				continue;
 			}
@@ -495,8 +498,10 @@ void taskServer(void *pvParameters){
 		//before finishing the movement task, spin until it's done.
 		while(finishedMoving != true)
 		{
-			ESP_LOGI("WAIT", "Waiting!");
+			//helps it defer to other tasks instead of spinning forever and ever
+			vTaskDelay(pdMS_TO_TICKS(10));
 		}
+		ESP_LOGI("DEBUG", "Finished Waiting!");
 		//delete the movement task since socket disconnected
 		vTaskDelete(doMovementHandle);
 		doMovementHandle = NULL;
@@ -526,7 +531,7 @@ float getRawDutyFromBaseDirection(float duty)
 {
 	//if duty is positive, remember valid values are from 86 - 100. If negative, from 36-50
 	uint8_t range = upperReverseBound - lowerReverseBound;
-	if(duty > 0.25)
+	if(duty > 1)
 	{
 		//works as we first limit it to the range 0 to 33 by dividing by 100 to get it between 0 and 1, then multiplying by 33.
 		duty /= 100.0;
@@ -534,7 +539,7 @@ float getRawDutyFromBaseDirection(float duty)
 		//Then, add 86 to put it in the range 56-89
 		duty += lowerForwardBound;
 	}
-	else if(duty < -0.25)
+	else if(duty < -1)
 	{
 		//first limit it to the range -1 to 0  by dividing by (100 / range)
 		duty /= 100.0;
@@ -652,7 +657,7 @@ void app_main() {
 		/* 		1,				// Priority */
 		/* 		NULL //handle to delete task
 		); */
-		xTaskCreate(taskServer, "taskServer", 4096, (void*)AF_INET, 5, NULL);
+		xTaskCreate(taskServer, "taskServer", 4096, (void*)AF_INET, 4, NULL);
 	}
 
 	vTaskDelay(pdMS_TO_TICKS(500));
