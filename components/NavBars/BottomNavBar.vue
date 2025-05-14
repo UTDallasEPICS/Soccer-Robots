@@ -1,7 +1,8 @@
 
+<template>
 <div class="navbar dark:bg-[#154734]">
     <div class="logo-container">
-        <img src="logoSrc" alt="UTD Logo" class="utd-logo" />
+        <img :src="logoSrc" alt="UTD Logo" class="utd-logo" />
     </div>
     <div class="Soccer-robots-container dark:text-[#C0C0C0]">
         <h2>Soccer Robots</h2>
@@ -50,8 +51,6 @@ const logoSrc = computed(() =>
 )
 
 const sruser = useCookie('sruser');
-const isLoggedIn = computed(() => sruser.value);
-const isChangingUsername = computed(() => true);
 
 const isLoggedIn = computed(() => !!sruser.value)
 const isChangingUsername = computed(() => true)
