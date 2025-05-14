@@ -1,11 +1,11 @@
 <template>
   <div class="border-4 rounded-lg border-black flex justify-between items-center overflow-hidden scoreboard">
     <p class="border-r-4 border-black rounded-lg bg-orange text-center score-box">{{ user1score }}</p>
-    <p class="grow text-center player-name">{{ "SemiUltra" }}</p>
+    <p class="grow text-center player-name">{{ user1 }}</p>
     <div class="bg-slate-300 border-black border-l-4 border-r-4 flex items-center timer-box">
-      <p class="timer-text">{{ "1:37" }}</p>
+      <p class="timer-text">{{ formatTimer }}</p>
     </div>
-    <p class="grow text-center player-name">{{ "TheRealDhruv" }}</p>
+    <p class="grow text-center player-name">{{ user2 }}</p>
     <p class="border-l-4 border-black rounded-lg bg-green text-center score-box">{{ user2score }}</p>
   </div>
 </template>
@@ -14,26 +14,27 @@
 import { computed } from "vue";
 
 const props = defineProps({
-  user1: { type: String, default: "" },
-  user2: { type: String, default: "" },
+  queue: { type: Array as () => string[], default: () => [] },
   timer: { type: Number, default: 97 },
   user1score: { type: Number, default: 0 },
   user2score: { type: Number, default: 0 },
 });
 
+const user1 = computed(() => props.queue[0] || "TBD");
+const user2 = computed(() => props.queue[1] || "TBD");
+
 const formatTimer = computed(() => {
   const minutes: number = Math.floor(props.timer / 60);
-  const seconds = props.timer % 60;
-  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  const seconds: number = props.timer % 60;
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 });
 </script>
-
 <style scoped>
 
 @import url('https://fonts.googleapis.com/css2?family=Jockey+One&family=Source+Code+Pro:ital,wght@0,700;1,700&display=swap');
 
 .scoreboard {
-  width: 65vw;
+  width: 69vw;
   height: 9vh;
   margin: 0 auto;
   margin-right: 2rem ;
@@ -58,7 +59,7 @@ const formatTimer = computed(() => {
 .player-name {
   font-family: Helvetica, sans-serif;
   font-weight: bold;
-  font-size: 2.5vw;
+  font-size: 2vw;
 }
 
 .timer-box {

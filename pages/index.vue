@@ -1,12 +1,11 @@
 <template>
-  <div class="overflow-hidden">
+  <div class="oveoverflow-hidden h-screen ">
     <div>
       <BottomNavBar>  </BottomNavBar>
     </div>
-    <div class="flex justify-center py-6">
+    <div class="flex justify-center py-4">
       <div class="flex flex-col" style="margin-top: 3vh;">
-        <Scoreboard :timer="Number(timer ?? 0)" :user1="player1?.username ?? ''" :user2="player2?.username ?? ''" :user1score="player1?.score ?? 0" :user2score="player2?.score ?? 0"></Scoreboard>
-        <span class="py-4 pr-6">
+        <Scoreboard :queue="queue" :user1score="player1?.score ?? 0" :user2score="player2?.score ?? 0" :timer="Number(timer ?? 0)"/>        <span class="py-4 pr-6">
                     <VideoStream></VideoStream>
                 </span>
       </div>

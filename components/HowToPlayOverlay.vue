@@ -1,7 +1,6 @@
 <template>
-    <div class="overlay ">
-      <div class="content">
-        <!-- Top Content -->
+    <div class="overlay fixed w-full h-full inset-0 bg-opacity-20 backdrop-blur-sm flex ">
+      <div class="content rounded-lg p-4 bg-white border-2 border-black ">
         <div class="top-content">
           <div class="title-container">
             <p class="title">How to Play</p>
@@ -10,9 +9,7 @@
             <p class="close-button" @click="emitClose">X</p>
           </div>
         </div>
-        <!-- Main Content -->
         <div class="main-content">
-          <!-- Left Content -->
           <div class="left-content">
             <div class="text-content">
               <p class="instructions">
@@ -52,6 +49,8 @@
     left: 0;
     width: 100%;
     height: 100%;
+    border-radius: 2px;
+    border-color: black;
     backdrop-filter: blur(2.5px);
     display: flex;
     justify-content: center;
@@ -62,6 +61,7 @@
   .content {
     background-color: white;
     border-radius: 8px;
+    border-color: black;
     width: 800px;
     height: 590px;
     display: flex;

@@ -2,14 +2,20 @@ import { PrismaClient, Player } from '@prisma/client'
 
 export default defineEventHandler(async (event) => {
   const prisma = event.context.prisma
-  const {sortedColumn} = getQuery(event);
+  const { sortedColumn } = getQuery(event)
 
-  const orderBy = {[(sortedColumn as string)]:  'desc' };
+  const allowedColumns = ['wins', 'goals', 'losses', 'ratio', 'username'] as const
 
-  const playerData = await prisma.Player.findMany({ orderBy: orderBy,
-    take: 5
-  }) as Player[];
+  const column = allowedColumns.includes(sortedColumn as any)
+    ? (sortedColumn as string)
+    : 'wins' 
 
+  const playerData = await prisma.player.findMany({
+    orderBy: {
+      [column]: 'desc',
+    },
+    take: 5,
+  }) as Player[]
 
   return playerData
 })
