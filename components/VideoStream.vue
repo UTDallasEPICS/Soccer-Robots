@@ -1,16 +1,20 @@
 <template>
-  <!--Defines video to be embedded into the website-->
-  <iframe :src="src" frameborder="0" allowfullscreen="false" scrolling="no" :height="height" :width="width"></iframe>
+  <img :src="streamUrl" :width="width" :height="height" alt="Live stream" />
 </template>
 
 <script setup lang="ts">
 const runtime = useRuntimeConfig()
-//Sets the current steram shown on the screen to what is defined as the channel name. 
-const src = `https://player.twitch.tv/?channel=${runtime.CHANNEL_NAME}&parent=${runtime.PARENT_NAME}` 
-const height = 540
-const width = 959
+console.log("Runtime config:", runtime)
+
+const streamUrl = 'http://192.168.250.90:8000/stream.mjpg'
+console.log("Stream URL:", streamUrl)
+
+const width = 955
+const height = 480
 </script>
 
-<style>
-
+<style scoped>
+img {
+  border: 2px solid #000;
+}
 </style>
