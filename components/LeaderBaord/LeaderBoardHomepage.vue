@@ -1,17 +1,32 @@
 <template>
-    <div class="border rounded-lg p-2.5 content-center text-center border-4 border-black" style="width: 100%; height: 83px; padding: 5px; margin-bottom: 113%; margin-top: 13%;"> 
-        <p style="font-style: italic">Up Next </p>
-        <div class="flex place-content-evenly flex-no-wrap" style="font-style: italic; padding-right:0px">
-            <p class="basis-0 grow truncate text-center"><strong>{{user1}}</strong></p>
-            <p class="text-center w-min"><strong>vs</strong></p>
-            <p class="basis-0 truncate grow text-center"><strong>{{user2}}</strong></p>
+    <div class="border-black rounded-lg border-4 rounded-b-5" style="width: 22vw; height: 32vh; display: flex; flex-direction: column;">
+    <p class="text-center border-b-4 border-black" style="font-weight: bold; font-size: 24px;">
+        Leaderboard
+    </p>
+    
+    <div class="overflow-y-auto flex-grow p-0.5 space-y-2">
+        <div v-for="(player, index) in topPlayers" :key="index" class="p-2 rounded text-sm" :style="{ backgroundColor: changeCardColor(index) }">
+        <p><strong>#{{ index + 1 }}</strong> — {{ player.username }}</p>
+        <p>🏆 Wins: {{ player.wins }}</p>
         </div>
+
+        <p v-if="topPlayers.length === 0">Loading...</p>
     </div>
-    </template>
-    
-    <script setup lang="ts">
-    const user1 = ref("megha66634324545")
-    const user2 = ref("crazouteriv")
-    </script>
-    
-    
+    </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import type { Player } from '@prisma/client'
+
+const { data: playerData } = await useFetch<Player[]>('/api/leaderboard')
+
+const topPlayers = computed(() => {
+    if (!playerData.value || playerData.value.length === 0) return []
+    return [...playerData.value].sort((a, b) => b.wins - a.wins).slice(0, 3)
+})
+
+const changeCardColor = (index: number) => {
+    return index % 2 === 0 ? '#D9D9D9' : '#E87500'
+}
+</script>
