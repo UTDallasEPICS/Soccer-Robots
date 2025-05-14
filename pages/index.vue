@@ -1,13 +1,12 @@
 <!--The main file for the page, that has embedded in it all the UI components from the components folder.-->
 <template>
-  <div class="overflow-hidden">
+  <div class="oveoverflow-hidden h-screen ">
     <div>
       <BottomNavBar>  </BottomNavBar>
     </div>
-    <div class="flex justify-center py-6">
+    <div class="flex justify-center py-4">
       <div class="flex flex-col">
-        <Scoreboard :timer="Number(timer ?? 0)" :user1="player1?.username ?? ''" :user2="player2?.username ?? ''" :user1score="player1?.score ?? 0" :user2score="player2?.score ?? 0"></Scoreboard>
-        <span class="py-4 pr-6">
+        <Scoreboard :queue="queue" :user1score="player1?.score ?? 0" :user2score="player2?.score ?? 0" :timer="Number(timer ?? 0)"/>        <span class="py-4 pr-6">
                     <VideoStream></VideoStream>
                 </span>
       </div>

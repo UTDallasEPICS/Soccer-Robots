@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed w-full h-full inset-0 bg-black bg-opacity-80 flex" style="z-index: 2">
+  <div class="fixed w-full h-full inset-0 bg-opacity-20 backdrop-blur-sm flex" style="z-index: 2">
     <div class="rounded-lg p-4 bg-white" style="width: 500px; height: auto; margin: auto;">
       <div class="w-min h-min text-black" style="margin-left: auto;">
         <!--This is the "x" mark at the top right of the admin panel, on clicking it will tell it to close the panel.-->
