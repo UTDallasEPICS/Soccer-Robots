@@ -10,6 +10,9 @@
         <div class="nav-item" @click="openAboutUs">About</div>
         <div class="nav-item" @click="openHowToPlay">How to Play</div>
         <div class="nav-item" @click="openHelp">Help</div>
+        <div>    
+            <p class="nav-item" v-if="isLoggedIn" @click="openChangeUsername"> Change Username </p>
+        </div>
         <div class="nav-item" v-if="isAdmin" @click="openAdminPanel">Admin</div>        
         <div class="nav-login"> <TopRightNavbar /> </div>
     </div>
