@@ -1,14 +1,14 @@
 <!--creates the scoreboard for the current ongoing match.-->
 
 <template>
-  <div class="border-4 rounded-lg border-black flex justify-between items-center overflow-hidden scoreboard">
+  <div class="border-4 rounded-lg border-black dark:bg-[#C0C0C0] flex justify-between items-center overflow-hidden scoreboard">
     <!--holds user one's score here.-->
     <p class="border-r-4 border-black rounded-lg bg-orange text-center score-box">{{ user1score }}</p>
     <!--holds user one's name.-->
     <p class="grow text-center player-name">{{ "SemiUltra" }}</p>
     <!--holds the timer for how much time is left in the match.-->
-    <div class="bg-slate-300 border-black border-l-4 border-r-4 flex items-center timer-box">
-      <p class="timer-text">{{ "1:37" }}</p>
+    <div class="bg-slate-300 dark:bg-black border-black dark:border-[#ffffff] border-l-4 border-r-4 flex items-center timer-box">
+      <p class="timer-text dark:text-[#ffffff]">{{ "1:37" }}</p>
     </div>
     <!--Holds user two's name here.-->
     <p class="grow text-center player-name">{{ "TheRealDhruv" }}</p>
