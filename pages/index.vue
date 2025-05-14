@@ -1,12 +1,16 @@
 <!--The main file for the page, that has embedded in it all the UI components from the components folder.-->
 <template>
-  <div class="oveoverflow-hidden h-screen ">
+        <button class="fixed bottom-4 right-4 p-2 bg-gray-200 dark:bg-gray-700 rounded text-gray-800 dark:text-gray-200 shadow-lg" @click="toggleTheme" > 🌓</button>
+
+  <div class="oveoverflow-hidden h-screen dark:bg-[#333333]">
     <div>
       <BottomNavBar>  </BottomNavBar>
     </div>
     <div class="flex justify-center py-4">
       <div class="flex flex-col">
-        <Scoreboard :queue="queue" :user1score="player1?.score ?? 0" :user2score="player2?.score ?? 0" :timer="Number(timer ?? 0)"/>        <span class="py-4 pr-6">
+        <Scoreboard :timer="Number(timer ?? 0)" :user1="player1?.username ?? ''" :user2="player2?.username ?? ''" :user1score="player1?.score ?? 0 " :user2score="player2?.score ?? 0"></Scoreboard>
+        <span class="py-4 pr-6">
+
                     <VideoStream></VideoStream>
                 </span>
       </div>
@@ -19,6 +23,29 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+
+// 1️⃣ initialize theme to a safe default
+const theme = ref<'light' | 'dark'>('light')
+
+// 2️⃣ only touch localStorage on the client (inside onMounted)
+function applyTheme() {
+  document.documentElement.classList.toggle('dark', theme.value === 'dark')
+}
+
+onMounted(() => {
+  // now we're guaranteed to be in the browser
+  const saved = localStorage.getItem('theme') as 'light' | 'dark' | null
+  theme.value = saved || 'light'
+  applyTheme()
+})
+
+// 3️⃣ toggle & persist
+function toggleTheme() {
+  theme.value = theme.value === 'light' ? 'dark' : 'light'
+  localStorage.setItem('theme', theme.value)
+  applyTheme()
+}
 const showLogIn = ref(false)
 //Srtoken is for security authentication, sruser is seeing if the user profile exists.
 const srtoken = useCookie('srtoken')

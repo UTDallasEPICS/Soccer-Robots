@@ -1,15 +1,15 @@
-<template>
-    <div class="navbar c">
+
+<div class="navbar dark:bg-[#154734]">
     <div class="logo-container">
-        <img src="/public/UTDLogo.svg" alt="UTD Logo" class="utd-logo" />
+        <img src="logoSrc" alt="UTD Logo" class="utd-logo" />
     </div>
-    <div class="Soccer-robots-container">
+    <div class="Soccer-robots-container dark:text-[#C0C0C0]">
         <h2>Soccer Robots</h2>
     </div>  
     <div class="nav-links">
-        <div class="nav-item" @click="openAboutUs">About</div>
-        <div class="nav-item" @click="openHowToPlay">How to Play</div>
-        <div class="nav-item" @click="openHelp">Help</div>
+        <div class="nav-item dark:text-[#C0C0C0]" @click="openAboutUs">About</div>
+            <div class="nav-item dark:text-[#C0C0C0]" @click="openHowToPlay">How to Play</div>
+            <div class="nav-item dark:text-[#C0C0C0]" @click="openHelp">Help</div>
         <div>    
             <p class="nav-item" v-if="isLoggedIn" @click="openChangeUsername"> Change Username </p>
         </div>
@@ -27,7 +27,31 @@
 </template>
 
 <script setup lang="ts">
-const sruser = useCookie<any>('sruser')
+
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+
+const isDark = ref(false) // Start with a default
+
+const updateDarkState = () => {
+  isDark.value = document.documentElement.classList.contains('dark')
+}
+
+onMounted(() => {
+  updateDarkState() // First check
+  document.addEventListener('click', updateDarkState) // Re-check when clicked
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', updateDarkState)
+})
+
+const logoSrc = computed(() =>
+  isDark.value ? '/UTDLogo-dark.png' : '/UTDLogo.svg'
+)
+
+const sruser = useCookie('sruser');
+const isLoggedIn = computed(() => sruser.value);
+const isChangingUsername = computed(() => true);
 
 const isLoggedIn = computed(() => !!sruser.value)
 const isChangingUsername = computed(() => true)
@@ -53,9 +77,10 @@ const closeChangeUsername = () => { showChangeUsername.value = false }
 const openAdminPanel = () => { showAdminPanel.value = true }
 const closeAdminPanel = () => { showAdminPanel.value = false }
 </script>
-<style scoped>
+
+<style>
 .navbar {
-    background-color: #f96c00;
+    background-color: #f96c00; 
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -97,7 +122,7 @@ const closeAdminPanel = () => { showAdminPanel.value = false }
     margin-right: 1vh;
     color: white;
     cursor: pointer;
-    transition: color 0.3s ease-in-out;
+    transition: color 0.1s ease-in-out;
     margin-top: 1.2rem;
 }
 .nav-login{
@@ -106,7 +131,7 @@ const closeAdminPanel = () => { showAdminPanel.value = false }
     font-weight: bold;
     color: white;
     cursor: pointer;
-    transition: color 0.3s ease-in-out;
+    transition: color 0.1s ease-in-out;
 }
 
 .nav-item:hover {

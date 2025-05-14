@@ -18,6 +18,19 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss'],
 
+  // Customize Tailwind by merging your own config
+  tailwindcss: {
+    config: {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          // add custom colors or other theme extensions here
+        }
+      },
+      plugins: []
+    }
+  },
+
   components: [
     { path: '~/components', pathPrefix: false } // Ensures auto-import without modifying _GlobalComponents
   ],
