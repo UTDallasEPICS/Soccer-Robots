@@ -93,7 +93,7 @@ Our project not only caters to the entertainment needs of our users but also ser
 ### Leaderboard
 
 - The leaderboard shall show the columns of the players wins, losses, total goals scored, total games played, and win/loss ratio
-- The leaderbooard should appear in modal
+- The leaderboard should appear in modal
 - The leaderboard shall be shortable by the columns representing: goals, wins, losses, win/loss ratio, and games played of each player
 - The leaderboard shall show the top 5 players
 - The leaderboard data shall update after every game
@@ -192,6 +192,7 @@ Get the signing certificate from the Auth0 application and create a root-level c
   - The slashes ```/``` are very important.
 - **NUXT_CHANNEL_NAME** and **NUXT_PARENT_NAME** depends on Twitch account
 - **CONTROLLER_PASSWORD** and **CONTROLLER_ACCESS** are useless because of randomized password rotations :)
+- Make sure to put in the proper value for "PI_ADDR". The ip address should be displayed on its screen when the Pi is connected to "RPIHotspot". If the hotspot isn't available, try connecting the monitor to the raspberry pi, and seeing what wifi it's connected to. That should give you details about its current address. Note that you may need to connect your own hotpsot to the raspberry pi, if the RPIHotspot isn't set up yet.
 
 ### Set up database
 
@@ -204,14 +205,17 @@ npx prisma migrate dev --name init
 **MAKE SURE THE RASPBERRY SERVER IS RUNNING FIRST**.\
 Then, in separate terminals, execute the following commands
 
-```bash
-# this starts Controller server
-npm run bootcontrol
-```
+**Additionally, make sure the Game Manager server is ran before Controller server, and reminder
+that the Raspberry Pi should have 3 processes running, as mentioned in the raspberry pi branch.**
 
 ```bash
 # this starts Game Manager server
 npm run bootgame
+```
+
+```bash
+# this starts Controller server
+npm run bootcontrol
 ```
 
 ```bash
