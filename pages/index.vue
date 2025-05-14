@@ -2,14 +2,15 @@
 <template>
         <button class="fixed bottom-4 right-4 p-2 bg-gray-200 dark:bg-gray-700 rounded text-gray-800 dark:text-gray-200 shadow-lg" @click="toggleTheme" > 🌓</button>
 
-  <div class="overflow-hidden dark:bg-[#333333]">
+  <div class="oveoverflow-hidden h-screen dark:bg-[#333333]">
     <div>
       <BottomNavBar>  </BottomNavBar>
     </div>
-    <div class="flex justify-center py-6">
+    <div class="flex justify-center py-4">
       <div class="flex flex-col">
         <Scoreboard :timer="Number(timer ?? 0)" :user1="player1?.username ?? ''" :user2="player2?.username ?? ''" :user1score="player1?.score ?? 0 " :user2score="player2?.score ?? 0"></Scoreboard>
         <span class="py-4 pr-6">
+
                     <VideoStream></VideoStream>
                 </span>
       </div>

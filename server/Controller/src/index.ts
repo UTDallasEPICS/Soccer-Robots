@@ -125,7 +125,8 @@ app.post("/addusers", (request, response) => {
             "users":[{"user_id":"abc","playernumber":0},{"user_id":"def","playernumber":1}]
         }
     */
-    const users = request.body.users
+    const users = request.body
+    console.log(users)
     // console.log(Object.keys(users)) // [ '0', '1' , ...]
     let status = 400
     //for each user being added, do thie following:

@@ -48,6 +48,16 @@ const matchSettings = async () => {
     //getting timer duration and numplayers from the matchsettings. if unable to find match length, set to default.
     timer_duration = response?.matchLength as unknown as number ? response?.matchLength as unknown as number : parseInt(`${process.env.TIMER_DURATION}`)
     numPlayers = response?.numPlayers as unknown as number
+    //if undefined, set it to default as 1v1
+    if(numPlayers == undefined)
+    {
+        numPlayers = 1
+    }
+    //there we go
+    if(timer_duration == undefined)
+    {
+        timer_duration = 30
+    }
 
 }
 
@@ -81,17 +91,17 @@ const gameCycle = setInterval( async () => {
                 ws_raspberry.send(JSON.stringify({
                     "type": "CHECK_READY",
                     "payload": ""
-                }))
+                }))   
             }
-
-
         }
     }
     //else if currently confirming
     else if(game_state == GAME_STATE.SEND_CONFIRM){
         // Check if received 2 confirmation response
         // Check if received confirmation responses
-        if(confirmation_timer == 0){ // time's up
+        if(confirmation_timer == 0)
+        { 
+            // time's up
             let numAccepted = 0
 
             for(let i = 0; i < players.length; i++){
@@ -101,7 +111,8 @@ const gameCycle = setInterval( async () => {
             }
 
             //checks if the amount of accepted players is equal to total number of players
-            if(numAccepted = numPlayers*2){
+            if(numAccepted = numPlayers*2)
+            {
 
                 game_state = GAME_STATE.PLAYING
                 CONTROLLER_ACCESS = nanoid() // new access code for each game
@@ -110,7 +121,7 @@ const gameCycle = setInterval( async () => {
                 for(let i = 0; i < players.length; i++){
                     let newPlayer = {
                         user_id: players[i]["user_id"],
-                        playernumber: i+1
+                        playernumber: i
                     }
                     currentPlayers.push(newPlayer)
                 }
@@ -130,6 +141,13 @@ const gameCycle = setInterval( async () => {
                     body: JSON.stringify(currentPlayers)
                 })
 
+                for(let i = 0; i < currentPlayers.length; i++){
+                    if(queue[i] == null)
+                    {
+                        console.log("ok dawg its undefed at index " + i)
+                    }
+                }
+
                 // give players the access code to connect to Controller server WebSocket
                 for(let i = 0; i < currentPlayers.length; i++){
                     queue[i].ws.send(JSON.stringify({
@@ -144,48 +162,49 @@ const gameCycle = setInterval( async () => {
                 queue.splice(0, currentPlayers.length)
                 timer = timer_duration
 
+                console.log("Timer duration: " + timer_duration)
                 // tell Raspberry server to start the game
                 ws_raspberry.send(JSON.stringify({
                     "type": "GAME_START",
                     "payload": {"timer": timer_duration}
                 }))
             }
-
-        }
-        else{ // did not get all accepts
-
-            // signal players to reset confirmation 
-            for(let i = 0; i < players.length; i++){
-                queue[i]["ws"].send(JSON.stringify({
-                    "type": "MATCH_CONFIRMATION_RESET",
-                    "payload": ""
-                }))
-            }
-
-
-            let declinedArray = []
-            // find the player(s) that declined/did not respond and remove from queue/close ws connection
-            for(let i = 0; i < players.length; i++){
-                let index = players.findIndex((element) => { return element["username"] === queue[i]["username"]})
-                if(index == -1 || players[index]["accepted"] === false){
-                    queue[i]["ws"].close()
-                    declinedArray.push(queue[i]["user_id"])
+            else
+            { // did not get all accepts
+    
+                // signal players to reset confirmation 
+                for(let i = 0; i < players.length; i++){
+                    queue[i]["ws"].send(JSON.stringify({
+                        "type": "MATCH_CONFIRMATION_RESET",
+                        "payload": ""
+                    }))
                 }
-            }
-
-            //Remove players from queue
-            let num = queue.length
-            for(let j = 0; j < declinedArray.length; j++){
-                let ID = declinedArray[j]
-                for(let m = 0; m < num; m++){
-                    if(queue[m]["user_id"] === ID){
-                        queue.splice(m, 1)
-                        num--
+    
+    
+                let declinedArray = []
+                // find the player(s) that declined/did not respond and remove from queue/close ws connection
+                for(let i = 0; i < players.length; i++){
+                    let index = players.findIndex((element) => { return element["username"] === queue[i]["username"]})
+                    if(index == -1 || players[index]["accepted"] === false){
+                        queue[i]["ws"].close()
+                        declinedArray.push(queue[i]["user_id"])
                     }
                 }
-            }
-            game_state = GAME_STATE.NOT_PLAYING
-            players.splice(0, players.length) // clear players array
+    
+                //Remove players from queue
+                let num = queue.length
+                for(let j = 0; j < declinedArray.length; j++){
+                    let ID = declinedArray[j]
+                    for(let m = 0; m < num; m++){
+                        if(queue[m]["user_id"] === ID){
+                            queue.splice(m, 1)
+                            num--
+                        }
+                    }
+                }
+                game_state = GAME_STATE.NOT_PLAYING
+                players.splice(0, players.length) // clear players array
+            }    
         }
         confirmation_timer--
     }
@@ -207,9 +226,6 @@ const gameCycle = setInterval( async () => {
             body: JSON.stringify({ "users": [  {"user_id": players[0]["user_id"]}, 
                                     {"user_id": players[1]["user_id"]}] })
         })
-
-
-        
 
         // store played match in database
         await prisma.match.create({
@@ -334,6 +350,8 @@ const gameCycle = setInterval( async () => {
         }
         //remove them from the player queue
         players.splice(0, 2)
+        //makes it so now there's no players curerntlyl anymore
+        currentPlayers.length = 0
         //now that game just ended robots are not ready until the raspberry pi says so.
         robots_ready = false
         timer = 0
