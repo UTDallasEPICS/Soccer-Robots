@@ -4,8 +4,8 @@
         Leaderboard
     </p>
     
-    <div class="overflow-y-auto flex-grow p-0.5">
-        <div v-for="(player, index) in topPlayers" :key="index" class="p-2 rounded text-sm" :style="{ backgroundColor: changeCardColor(index) }">
+    <div class="overflow-y-auto flex-grow p-0.5" >
+        <div v-for="(player, index) in topPlayers" :key="index" class="p-2 rounded text-sm " :style="{ backgroundColor: changeCardColor(index) }">
         <p><strong>#{{ index + 1 }}</strong> — {{ player.username }}</p>
         <p>🏆 Wins: {{ player.wins }}</p>
         </div>
@@ -21,12 +21,17 @@ import type { Player } from '@prisma/client'
 
 const { data: playerData } = await useFetch<Player[]>('/api/leaderboard')
 
+const props = defineProps({
+    theme: {type: String, default: "light"},
+})
+
 const topPlayers = computed(() => {
     if (!playerData.value || playerData.value.length === 0) return []
     return [...playerData.value].sort((a, b) => b.wins - a.wins).slice(0, 3)
 })
 
+
 const changeCardColor = (index: number) => {
-    return index % 2 === 0 ? '#D9D9D9' : '#E87500'
+    return index % 2 === 0 ? '#D9D9D9' : (props.theme == "light") ? '#E87500' : '#154734'
 }
 </script>

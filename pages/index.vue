@@ -15,7 +15,7 @@
                 </span>
       </div>
       <!--when user tries to join or leave queue, run the according functions in this file.-->
-      <QueueContainer :queueUsers="queue" @join-queue="joinQueue" @leave-queue="leaveQueue"></QueueContainer>
+      <QueueContainer :queueUsers="queue" :theme="theme" @join-queue="joinQueue" @leave-queue="leaveQueue"></QueueContainer>
       <ConfirmMatchOverlay v-if="confirmationRequest && stillNeedsResponse" @confirm-response="confirmMatch"/>
     </div>
   </div>

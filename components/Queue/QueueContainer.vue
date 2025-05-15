@@ -3,7 +3,7 @@
 <template>
 <div class="w-[340px] h-full">
     <Upcoming :queue="queueUsers" />
-    <LeaderBoardHomepage/>
+    <LeaderBoardHomepage :theme="theme"/>
     <Queue :queueUsers="queueUsers" @join-queue="$emit('join-queue')" @leave-queue="$emit('leave-queue')" />
   </div>
 </template>
@@ -14,5 +14,6 @@
 
   const props = defineProps({
   queueUsers: { type: Array<string>, default: [] },
+  theme: {type: String, default: "light"}
 })
 </script>
