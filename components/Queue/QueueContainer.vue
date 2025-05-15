@@ -1,7 +1,7 @@
 <!--container for the all the queue cards.-->
 
 <template>
-  <div class="w-340 h-full mt-[-12px]">
+<div class="w-[340px] h-full">
     <Upcoming :queue="queueUsers" />
     <LeaderBoardHomepage/>
     <Queue :queueUsers="queueUsers" @join-queue="$emit('join-queue')" @leave-queue="$emit('leave-queue')" />

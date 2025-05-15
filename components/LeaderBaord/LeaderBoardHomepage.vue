@@ -1,10 +1,10 @@
 <template>
-    <div class="border-black rounded-lg border-4 rounded-b-5" style="width: 22vw; height: 32vh; display: flex; flex-direction: column;">
-    <p class="text-center border-b-4 border-black" style="font-weight: bold; font-size: 24px;">
+<div class="border-black rounded-lg border-4 rounded-b-none w-[22vw] flex flex-col">
+    <p class="text-center border-b-4 border-black  dark:bg-[#154734]" style="font-weight: bold; font-size: 24px;">
         Leaderboard
     </p>
     
-    <div class="overflow-y-auto flex-grow p-0.5 space-y-2">
+    <div class="overflow-y-auto flex-grow p-0.5">
         <div v-for="(player, index) in topPlayers" :key="index" class="p-2 rounded text-sm" :style="{ backgroundColor: changeCardColor(index) }">
         <p><strong>#{{ index + 1 }}</strong> — {{ player.username }}</p>
         <p>🏆 Wins: {{ player.wins }}</p>
