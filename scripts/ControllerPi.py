@@ -26,15 +26,20 @@ async def serverCM(websocket, path):
 
     print("connected to esp!")
 
+    # continue to receive data
     while True:
         received_data = await websocket.recv()
         received = json.loads(received_data)
         if received["type"] == "KEY_INPUT":
+            # first get player number
             playerNum = received["payload"]["playernumber"]
+            # if the data is same as before, dont' send it to EspManager. If it's different, then send it.
             if(prevData[playerNum] != received["payload"]["keys"]):
                 print("Player " + str(playerNum) + " Input (bits): " + received["payload"]["keys"])
+                # use "|" to differnetiate between player index and their input
                 sentData = str(playerNum) + "|" + received["payload"]["keys"]
                 controlSocket.sendall(sentData.encode())
+                # sent current data to previous data now
                 prevData[playerNum] = received["payload"]["keys"]
 
 
