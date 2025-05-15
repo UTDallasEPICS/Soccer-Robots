@@ -22,7 +22,7 @@ def getTime():
     return game_time
 runBackTracking = False
 
-#before communicating with the esp, to prevent race conditions first allocate sharemd memory.
+#before communicating with the espManager, to prevent race conditions first allocate sharemd memory.
 timerFile = os.open(sharedMemory, os.O_CREAT | os.O_RDWR)
 os.ftruncate(timerFile, 1)
 memLocation = mmap.mmap(timerFile, 1)
@@ -45,6 +45,7 @@ async def serverGM(websocket, path):
 
         print("inside GM")
 
+        # wait until the robots are ready
         while isReady==False:
             received_data = await websocket.recv()
             received = json.loads(received_data)
@@ -52,6 +53,7 @@ async def serverGM(websocket, path):
             if received["type"] =="CHECK_READY":
                 # now, check with the esp manager if its ready
                 espSocket.sendall(b"ready?")
+                # at most, what's returned is 3 bits, as its either "yes" or "no".
                 readyCheck = espSocket.recv(3)
                 readyCheck = readyCheck.decode()
                 # if we return that they are ready, send that to the website
@@ -75,7 +77,7 @@ async def serverGM(websocket, path):
 
         received_data = await websocket.recv()
         received = json.loads(received_data)    
-
+        # for debugging, there is a bug where data is seemingly sent as a string instead of a json object
         if(isinstance(received, str)):
             print("bruh it's a string! Its value is: " + received)
         print(received["payload"], type(received["payload"]))
@@ -87,12 +89,14 @@ async def serverGM(websocket, path):
             "payload": {"score1": team1Score, "score2": team2Score}
         }
 
+        # continue printing until game is over
         while game_time >= 0 and isReady:
             if game_time == 0:
                 final_score_update = {"type": "GAME_END","payload": {"timer": 0, "score1": team1Score, "score2": team2Score}}
                 await websocket.send(json.dumps(final_score_update))
                 isReady = False
                 runBackTracking = True
+                # when game time is 0, now reset the shared memory with espManger, telling it timer is now 0, and thus we are finished
                 memLocation[:1] = bytes([0])
                 break
 
