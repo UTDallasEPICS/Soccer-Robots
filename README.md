@@ -28,7 +28,7 @@ As for the camera, you will be able to stream it by running "cleanedCode.py", wh
 connected onto the Raspberry Pi. Note that while we're temporarily using the smaller camera, we want to use the Arducam camera eventually because it has a wider lens and thus can capture the game better.
 Research may need to be done on how to implement it with the Arducam, as there were some difficulties doing so.
 
-So overall, all the scripts you'll really need to run the website will be in the "scripts" directory, and you just need the following 4 files: EspManager.py, ControllerPi.py, GmServerPi.py, and cleanedCode.py.
+So overall, all the scripts you'll really need to run the website will be in the "scripts" directory, and you just need the following 5 files: EspManager.py, ControllerPi.py, GmServerPi.py, ESPClient.py, and cleanedCode.py. ESPClient.py is used to easily handle connections between the esp and pi.
 
 Additiinally though, we did have code for the camera to detect charging stations, and give commands to the esp32 so that the robot will move towards the charging stations. The code for this may be in "apriltagLiveFeed.py",
 ask your mentor for further details.
