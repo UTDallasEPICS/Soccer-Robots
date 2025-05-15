@@ -8,6 +8,8 @@ import mmap
 # from backupTag import runTrakcer
 
 #HOST = 'localhost'
+
+# update this whenever the ip address of the raspberry pi changes. There may exist a way to automatically get the address.
 HOST = '192.168.250.90'
 PORT = 1234
 
