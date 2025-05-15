@@ -28,7 +28,9 @@ console.log("Stream URL:", streamUrl)
   border-radius: 20px;
   overflow: hidden;
   position: relative;
-  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+  /* padding-top: 56.25%; 16:9 Aspect Ratio */
+  width: 645px;
+  height: 480px;
 }
 
 .video-container iframe {
