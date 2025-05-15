@@ -16,7 +16,7 @@
 const runtime = useRuntimeConfig()
 console.log("Runtime config:", runtime)
 
-const streamUrl = 'http://192.168.250.90:8000/stream.mjpg'
+const streamUrl = `http://${process.env.PI_ADDR}:${process.env.PI_CAMERA_PORT}/stream.mjpg`
 console.log("Stream URL:", streamUrl)
 </script>
 
