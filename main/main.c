@@ -56,7 +56,7 @@ static timer_config_t config = {
     .alarm_en = TIMER_ALARM_DIS,        // don’t need alarm
     .auto_reload = false,               // Auto-reload timer. Don’t want this
 	//currently, we are going to update the timer every half a millisecond, so we'll need to account for this.
-    .divider = 40000,                     // Timer clock divider (80000 gives a 1 millisecond resolution. As divider = APB clock frequency / ticks per second. Frequency is 80 MHz, so 80Mhz/1000 means 80000 total )
+    .divider = 40000,                     // Timer clock divider (40000 gives a 0.5 millisecond resolution. )
     .counter_dir = TIMER_COUNT_UP,     // Count upwards
     .counter_en = false,         // Start the timer
     .intr_type = TIMER_INTR_LEVEL,     // Interrupt type
@@ -77,6 +77,7 @@ static bool charging;
 static bool inGame;
 static bool resetting;
 
+// used to decide when we start reversing or moving forward and such
 static uint8_t lowerReverseBound = 16;
 static uint8_t upperReverseBound = 49;
 static uint8_t lowerForwardBound = 56;
@@ -86,7 +87,13 @@ TaskHandle_t doMovementHandle = NULL;
 bool finishedMoving = false;
 bool interruptMovement = false;
 
+//the way we do it is first index - left motor, second index - right motor.
+
+//for currente direction, ti's between -100 and 100. negative numbers mean reverse motor,
+//and -100 reverses and greater speed than say -10, and 100 goes at faster spee than say
+//10. We will later map this to the proper duty values
 static float currentDirection[2] = {0, 0};
+//stores the direction values we are currently at and our starting values
 static int8_t currentTargets[2] = {0, 0};
 static float startTargets[2] = {0, 0};
 
@@ -104,7 +111,8 @@ typedef struct {
     int8_t stop[2];
 } MoveTargets;
 
-// Initialize the struct after declaration
+// Initialize the struct after declaration. Basically depending on the input from the player, we will
+// drive the esp to one of the following targets.
 static MoveTargets moveTargets = {
     {85, 85},
     {-85, -85},
@@ -123,6 +131,7 @@ float pwmFunction(uint8_t index, int16_t x)
 	float a = fabs(currentTargets[index] - startTargets[index]);
 	float c = fmin(startTargets[index], currentTargets[index]);
 	float b;
+	//do this because when we divide currentTargets-startTargets, that'd otherwise be dividing by 0, which we avoid this way.
 	if(currentTargets[index] == startTargets[index])
 	{
 		b = 0;
@@ -135,13 +144,14 @@ float pwmFunction(uint8_t index, int16_t x)
 	return returnVal;
 }
 
+//This will store the current input of what keys are being pressed
 typedef struct {
 	bool forward, left, right, back;
 } Movement;
 
 static Movement *moveStruct;
 
-
+// this takes in teh buffer sent from the pi, and sees which directions movement must go in
 void setMoveStruct(char *buffer, int length)
 {
 	//resetting the struct.
@@ -178,11 +188,14 @@ void setMoveStruct(char *buffer, int length)
 	}
 }
 
+//this will iniitializve movement to a new target for the first time
 void beginMoving()
 {
+	//set start to current values
 	startTargets[0] = currentDirection[0];
 	startTargets[1] = currentDirection[1];
 	timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 0);
+	// begin our timer
 	timer_start(TIMER_GROUP_0, TIMER_0);
 	//get final targets here
 	if(moveStruct->forward)
@@ -247,11 +260,14 @@ void beginMoving()
 	}
 }
 
+//function to overall handle movement
 void doMovement(void *pvParameters)
 {
 	//always running while connected
 	while(true)
 	{
+		//once we about to start, assume movement interrupt has already been interrupted, so set
+		//to false again
 		interruptMovement = false;
 		//assume when we start, we begin moving
 		beginMoving();
@@ -266,22 +282,24 @@ void doMovement(void *pvParameters)
 				currentDirection[0], currentDirection[1], moveStruct->forward, moveStruct->left, moveStruct->right, moveStruct->back, (int16_t) (x/2 - 250));	
 	
 			//once we reach our limit, we break out of our movement loop and wait
-			if(x >= 1000)
+			if(x >= 500)
 			{
+				//pause our hardware timer so it's not constantly running, and break out the loop to begin waiting
 				timer_pause(TIMER_GROUP_0, TIMER_0);
-				timer_set_counter_value(TIMER_GROUP_0, TIMER_0, 1000);
 				break;
 			}
 
 			//otherwise, keep updating
 			currentDirection[0] = pwmFunction(0, (int16_t) (x/2 - 250));
 			currentDirection[1] = pwmFunction(1, (int16_t) (x/2 - 250));
-			move();		
+			move();	
+			//if we're given command to interrupt movement due to new keys before we finish, break anyways
 			if(interruptMovement)
 			{
 				break;
 			}
 		}
+		//if interrupting movement, don't want to take the semaphore, cause we've just been given command to interrupt movement, so avoid with this "continue" keyword
 		if(interruptMovement)
 		{
 			continue;
@@ -289,6 +307,7 @@ void doMovement(void *pvParameters)
 		//wait until new data is sent after we've reached our target
 		finishedMoving = true;
 		ESP_LOGI("SNOOZE", "Snoozing until new data!");
+		//wait for new data and snooze to save CPU cycles
 		xSemaphoreTake(waitForData, portMAX_DELAY);
 		ESP_LOGI("SNOOZE", "LOCK IN, got new data!");
 	}
@@ -306,6 +325,7 @@ static void sendMessage(const int sock, const char* message)
 static int receiveMessage(const int sock, char* rx_buffer)
 {
 	uint8_t length = 0;
+	//continue reading until we get a delimeter
 	while(true)
 	{
 		int8_t status = recv(sock, rx_buffer + length, 1, 0);
@@ -327,6 +347,7 @@ static int receiveMessage(const int sock, char* rx_buffer)
 	return length;
 }
 
+//in general handles receiving data from the pi
 static void on_receive(const int sock)
 {
     int len;
@@ -336,6 +357,7 @@ static void on_receive(const int sock)
     do 
 	{
         
+		// wait for message first
 		len = receiveMessage(sock, rx_buffer);
         if (len < 0) {
             ESP_LOGE(TAG, "Error occurred during receiving: errno %d", errno);
@@ -359,6 +381,7 @@ static void on_receive(const int sock)
 					//send ready
 					sendMessage(sock, "ready");
 					inGame = true;
+					//set up movement as we about to begin the game
 					xTaskCreate(doMovement, "doMovement", 8192, NULL, 5, &doMovementHandle);
 				}
 				continue;
@@ -367,8 +390,12 @@ static void on_receive(const int sock)
 			if(len >= 5 && strncmp(rx_buffer, "reset", 5) == 0)
 			{
 				inGame = false;
+				//set to z just to mean we are now moving both motors to 0.
 				setMoveStruct((char*) "z", 1);
+				//assume we will now move to 0, even if already at 0.
 				finishedMoving = false;
+
+				//set both as a bit of overkill, but to make sure the esp will run the command to stop for sure
 				interruptMovement = true;
 				xSemaphoreGive(waitForData);
 
@@ -384,13 +411,13 @@ static void on_receive(const int sock)
 			}
             ESP_LOGI(TAG, "Received %d bytes: %s", len, rx_buffer);
 			setMoveStruct(rx_buffer, len);
-			//if we were already moving, want to now tell the esp that we're gonna interrupt now.
+			//if we were already moving but haven't reached our target, want to now tell the esp that we're gonna interrupt now.
 			if(!finishedMoving)
 			{
 				interruptMovement = true;
 			}
 			//always give semaphore, as it's a possible race condition still that we mmight interrupt movement and then in our movement task before
-			//we do the break we stop moving.
+			//we do the break we stop moving. It's a binary semaphore so it's not a big deal
 			xSemaphoreGive(waitForData);
             // send() can return less bytes than supplied length.
             // Walk-around for robust implementation.
@@ -411,6 +438,7 @@ static void on_receive(const int sock)
     } while (len > 0);
 }
 
+//overall handles connection with the pi through a TCP connection with a socket.
 void taskServer(void *pvParameters){	
 	char* TAG = "SERVER";
     char addr_str[128];
@@ -459,6 +487,7 @@ void taskServer(void *pvParameters){
         goto CLEAN_UP;
     }
 
+	//continue reading until socket breaks, then loop back
     while (1) 
 	{
         ESP_LOGI(TAG, "Socket listening");
@@ -516,52 +545,60 @@ CLEAN_UP:
 
 //Raw Duty = (Percent/100) * (2^LEDC_DUTY_RES)
 
-//Gets the raw duty value from the percentage from 0 to 100
+//Gets the raw duty value from the percentage from 0 to 100. 
 float getRawDutyFromPercent(float duty){	
+	//divide to convert from percent to decimal
 	duty /= 100;	
 	return (pow(2, LEDC_DUTY_RES) * duty);
 }
 
+//unused method, but we do keep it just in case. 
 float getPercentFromRawDuty(float duty)
 {
 	return (duty*100)/(pow(2, LEDC_DUTY_RES));
 }
 
+//from the direction going from -100 to 100, gets actual duty value needed to send to the motors
 float getRawDutyFromBaseDirection(float duty)
 {
 	//if duty is positive, remember valid values are from 86 - 100. If negative, from 36-50
 	uint8_t range = upperReverseBound - lowerReverseBound;
+	//if positive movement
 	if(duty > 1)
 	{
-		//works as we first limit it to the range 0 to 33 by dividing by 100 to get it between 0 and 1, then multiplying by 33.
+		//first get it between 0 and 1, then multiple to get in the forward range, then add by lower bound to get a range between loewr and upper bound.
+		//this keeps it in the correct range 56 to 89
 		duty /= 100.0;
 		duty *= range;
-		//Then, add 86 to put it in the range 56-89
 		duty += lowerForwardBound;
 	}
+	// if negative movement
 	else if(duty < -1)
 	{
 		//first limit it to the range -1 to 0  by dividing by (100 / range)
 		duty /= 100.0;
-		//then put it in the range -33 to 0 by multiplying by range
+		//then put it in the correct range from say -33 to 0 by multiplying by range
 		duty *= range;
 		//now, add 33 to put it in the range 0 and 33, and then add 16 to put it in the range 16 to 49
 		duty += range + lowerReverseBound;
 	}
+	// meaning movement is roughly 0, so set it to 53 which makes it about 0.
 	else
 	{
 		duty = 53;
 	}
+	//now that we have correct duty cycle numbers, get specifically the raw duty
 	return getRawDutyFromPercent(duty);
 }
 
-//converts pulse width (in ms) to the proper duty cycle RAW.
+//converts pulse width (in ms) to the proper duty cycle RAW. Not sure if this is right, may have to check
 float convertPulseWidthToPercentDuty(int pulseWidth)
 {
 	//get it with pulse width over period. Convert from microseconds to seconds too.
 	return pulseWidth/(pow(10, 6)/LEDC_FREQUENCY) * 100;
 }
 
+// sets up the PWM pins and timer
 static void ledc_setup(){
 	// Timer Configuration
 	gpio_reset_pin(LEDC_OUTPUT_IO1);
@@ -601,6 +638,7 @@ static void ledc_setup(){
 	};
 	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf2));
 
+	//50 means neither moves
 	uint8_t startPos = 50;
 	//Move the left motor to start position
 	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, startPos / 100.0 * pow(2, LEDC_DUTY_RES)));
@@ -625,6 +663,7 @@ void move(){
 
 }
 
+//just quickly putting the on-chip LED to high
 void doBlink()
 {
 	gpio_reset_pin(BLINK_GPIO);
@@ -633,7 +672,9 @@ void doBlink()
 	gpio_set_level(BLINK_GPIO, s_led_state);
 }
 
+//where the program initially starts
 void app_main() {
+	//allocate space for struct, initially set everything to false
 	moveStruct = malloc(sizeof(Movement));
 	*moveStruct = (Movement) {false, false, false, false};
 	charging = false;
