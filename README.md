@@ -24,3 +24,9 @@ Finally, as for the movement we use basically s-curves for smooth control. The e
 ![image](https://github.com/user-attachments/assets/8f57eb09-9af4-40c4-bd81-6aa076cef75f)
 
 So basically our x value will change over time (which we do with a hardware timer), and our y value will be the new speed we are using. This allows us to smoothly change between different speeds depending on what's being pressed.
+
+One important note is that the correct pulse widths don't seem to really be accurate to what's given on the ESC documentation (which is https://repeat-robotics.com/buy/desc/). It might be just with the one ESC we had working though. I would check the new ESC's to see the valid pulse width ranges and valid duty cycles needed. While you'd expect the valid duty cycle %'s to be 36-50 and 86-100, those do get the valid pulse widths, but they don't seem to really work.
+
+Also note you have to initially set the duty cycle to in between reverse and forward, and you have to slowly increase it in either direction. So let's say the valid ranges are in fact 36-50 for reverse and 86-100. You can't just do duty = 90 and expect it to work. You'd say have to do duty = 60, and incement it until it reaches 90 to drive the motors. Likewise in reverse.
+
+To understand a bit better on how motors work, research pulse width modulation, duty cycles, positive pulse width and know about frequency/period.
