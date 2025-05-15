@@ -20,5 +20,7 @@ The Raspberry Pi should send messages which include "readyCheck" when the websit
 
 We also use semaphores to balance between the multithreading we do between the movement and the receiving input.
 
-Finally, as for the movement we use basically s-curves for smooth control. The equation I use has the curve look kind of like this, where "s" and "f" are the different speeds we want to move between.
+Finally, as for the movement we use basically s-curves for smooth control. The equation I use has the curve looks kind of like this, where "s" and "f" are the different speeds we want to move between.
 ![image](https://github.com/user-attachments/assets/8f57eb09-9af4-40c4-bd81-6aa076cef75f)
+
+So basically our x value will change over time (which we do with a hardware timer), and our y value will be the new speed we are using.
