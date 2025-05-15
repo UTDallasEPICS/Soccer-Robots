@@ -282,7 +282,7 @@ void doMovement(void *pvParameters)
 				currentDirection[0], currentDirection[1], moveStruct->forward, moveStruct->left, moveStruct->right, moveStruct->back, (int16_t) (x/2 - 250));	
 	
 			//once we reach our limit, we break out of our movement loop and wait
-			if(x >= 500)
+			if(x >= 1000)
 			{
 				//pause our hardware timer so it's not constantly running, and break out the loop to begin waiting
 				timer_pause(TIMER_GROUP_0, TIMER_0);
