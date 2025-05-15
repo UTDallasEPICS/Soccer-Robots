@@ -1,6 +1,7 @@
 <!--Component to show the next upcoming match. Currently just set to arbitrary names.-->
 <template>
-<div class="border rounded-lg p-2.5 content-center text-center border-4 border-black" style="width: 100%; height: 70px; padding: 5px; margin-bottom: 3.5%; margin-top: 3.5%;"> 
+
+<div class="border rounded-lg p-2.5 content-center text-center border-4 border-black dark:bg-[#C0C0C0]" style="width: 100%; height: 9vh; padding: 5px; margin-bottom: 115%; margin-top: 12%;"> 
     <p style="font-style: italic">Up Next </p>
     <div class="flex place-content-evenly flex-no-wrap" style="font-style: italic; padding-right:0px">
         <p class="basis-0 grow truncate text-center"><strong>{{user1}}</strong></p>
@@ -10,9 +11,12 @@
 </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts"> 
 // Sets up random placeholder usernames.
-const user1 = ref("megha66634324545")
-const user2 = ref("crazouteriv")
+const props = defineProps<{ queue: string[] }>()
+
+const user1 = computed(() => props.queue[0] || "TBD")
+const user2 = computed(() => props.queue[1] || "TBD")
+
 </script>
 

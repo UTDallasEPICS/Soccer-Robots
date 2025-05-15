@@ -1,5 +1,15 @@
 <template>
-  <img :src="streamUrl" :width="width" :height="height" alt="Live stream" />
+  <!--Defines video to be embedded into the website-->
+  <div class="video-container">
+    <iframe 
+      :src="streamUrl" 
+      frameborder="0" 
+      allowfullscreen="false" 
+      scrolling="no"  
+      allow="autoplay; fullscreen"
+      alt="Live stream"
+    ></iframe>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -8,13 +18,24 @@ console.log("Runtime config:", runtime)
 
 const streamUrl = 'http://192.168.250.90:8000/stream.mjpg'
 console.log("Stream URL:", streamUrl)
-
-const width = 955
-const height = 480
 </script>
 
 <style scoped>
-img {
-  border: 2px solid #000;
+.video-container {
+  max-width: 1250px;
+  margin: auto;
+  border: 5px solid black;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  padding-top: 56.25%; /* 16:9 Aspect Ratio */
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 </style>

@@ -1,4 +1,3 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   runtimeConfig: {
     CHANNEL_NAME: '',
@@ -7,7 +6,7 @@ export default defineNuxtConfig({
     AUTH0_SECRET: '',
     BASEURL: '',
     ISSUER: '',
-    public:{
+    public: {
       CONFIRMATION_TIMER_DURATION: '',
       LOCALHOST: '',
       PORT_CLIENT_GM: '',
@@ -18,5 +17,23 @@ export default defineNuxtConfig({
 
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss'],
+
+  // Customize Tailwind by merging your own config
+  tailwindcss: {
+    config: {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          // add custom colors or other theme extensions here
+        }
+      },
+      plugins: []
+    }
+  },
+
+  components: [
+    { path: '~/components', pathPrefix: false } // Ensures auto-import without modifying _GlobalComponents
+  ],
+
   compatibilityDate: '2024-10-03'
 })

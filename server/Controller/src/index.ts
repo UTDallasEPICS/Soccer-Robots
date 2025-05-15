@@ -14,8 +14,8 @@ interface JwtPayloadWithRole extends jwt.JwtPayload {
   
 // Environment variables
 dotenv.config({ path: "./.env" })
-const LOCALHOST: string = process.env.LOCALHOST ?? "localhost"
 const PI_ADDR : string = process.env.PI_ADDR
+const LOCALHOST: string = process.env.LOCALHOST ?? "localhost"
 const PORT_SERVER: number = parseInt(`${process.env.PORT_EXPRESS_CONTROLLER_GAMEMANAGER}`)
 const PORT_WSS_CLIENT: number = parseInt(`${process.env.PORT_WSS_CONTROLLER_CLIENT}`)
 const PORT_WSS_RASPBERRY: number = parseInt(`${process.env.PORT_WSS_CONTROLLER_RASPBERRY}`)
@@ -36,7 +36,7 @@ const printCurrentUsers = () => {
 // WEBSOCKET RASPBERRY
 // Make sure to set up Raspberry server first
 
-// const ws_raspberry = new WebSocket(`ws://localhost:${PORT_WSS_RASPBERRY}`)
+// const ws_raspberry = new WebSocket(`ws://${PI_ADDR}:${PORT_WSS_RASPBERRY}`)
 const ws_raspberry = new WebSocket(`ws://${PI_ADDR}:${PORT_WSS_RASPBERRY}`)
 
 ws_raspberry.onopen = (event) => {
@@ -125,7 +125,8 @@ app.post("/addusers", (request, response) => {
             "users":[{"user_id":"abc","playernumber":0},{"user_id":"def","playernumber":1}]
         }
     */
-    const users = request.body.users
+    const users = request.body
+    console.log(users)
     // console.log(Object.keys(users)) // [ '0', '1' , ...]
     let status = 400
     //for each user being added, do thie following:
