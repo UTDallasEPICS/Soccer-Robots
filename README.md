@@ -55,7 +55,7 @@ Our project not only caters to the entertainment needs of our users but also ser
 #### Admin 
 
 - The Admin shall be able to change match settings
-- The Admin shhall be able shutdown the Robot
+- The Admin shall be able shutdown the Robot
 
 ## Functional Requirements
 
