@@ -1,16 +1,17 @@
 # Starting the Raspberry Pi
 
-## Setup
+### Setup
 
 Before starting anything, make sure you have installed the Driver for the WI-FI Adapter.
-**[NEEDS DETAILS]
-**
-You must also install all libraries to use the camera.
-**[NEEDS DETAILS]
-**
-## Accessing the Raspberry Pi
+**[NEEDS DETAILS]**
 
-After turning on the Pi and connecting to the internet, use your terminal to SSH into the Pi by typing <username>@<ipaddress> where "timthegoat" is the username and the ipaddress is your local Pi address shown below.
+You must also install all libraries to use the camera.
+**[NEEDS DETAILS]**
+
+### Accessing the Raspberry Pi
+
+
+After turning on the Pi and connecting to the internet, use your terminal to SSH into the Pi by typing <username>@<ipaddress>, where "timthegoat" is the current username and the ipaddress is your local Pi address shown below.
 ![image](https://github.com/user-attachments/assets/e83135cc-39a2-4ad9-8e8b-7ac2651071df)
 
 NOTE: when attempting to run the servers, you'll need to activate the virtual
@@ -22,7 +23,7 @@ the virtual environment.
 Also, make sure when communicating with the server that both **ControllerPi.py** and **GmServerPi.py** are active. Even if you're just testing the GM server, it will appear to not work unless
 the controller server is also active.
 
-## Startup
+### Startup
 
 To run this, you want to first activate **EspManager.py**. This is basically the process that will communicate with the Raspberry Pi's. It does this by creating child processes, and each child
 makes a TCP connection with a single ESP, and communicates with the parent back and forth with unnamed pipes. **ControllerPi.py** and **GmServerPi.py** will send relevant information to **EspManager.py**
@@ -48,20 +49,31 @@ ask your mentor for further details.
       
 # File Descriptions
 
-## EspManager.py
 
-## ControllerPi.py
+## Startup
 
-## GmServerPi.py
+### EspManager.py
 
-## ESPClient.py
+### ControllerPi.py
+
+### GmServerPi.py
+
+### ESPClient.py
+
+
+# Camera
 
 ## cleanCode.py
+
+## combinedCam.py
 
 ## apriltagLiveFeed.py
 
 
 
-## Backtracking.py
 
-## BackupTag.py
+## backtracking.py
+
+## backupTag.py
+
+## carConnect.py
