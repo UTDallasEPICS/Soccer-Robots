@@ -6,7 +6,13 @@ Before starting anything, make sure you have installed the Driver for the WI-FI 
 **[NEEDS DETAILS]**
 
 You must also install all libraries to use the camera.
-**[NEEDS DETAILS]**
+You will need libcamera and picamera2 
+
+**sudo apt install libcamera**
+**sudo apt install -y python3-picamera2**
+
+
+[TROUBLE SHOOTING](https://www.youtube.com/watch?time_continue=356&v=U7yVpYv3gxQ&embeds_referring_euri=https%3A%2F%2Fwww.google.com%2Fsearch%3Fq%3Dconnecting%2Bcamera%2Bmodule%2B3%2Bto%2Bpi4%26rlz%3D1C1VDKB_enUS994US994%26oq%3Dconnecting%2Bcamera%2Bmodule%2B3%2Bto%2Bpi4%26&source_ve_path=MzY4NDIsMzY4NDIsMzY4NDIsMzY4NDIsMzY4NDIsMzY4NDIsMzY4NDIsMzY4NDIsMzY4NDIsMTM5MTE3LDIzODUx)
 
 ### Accessing the Raspberry Pi
 
