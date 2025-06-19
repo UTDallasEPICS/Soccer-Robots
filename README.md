@@ -42,7 +42,7 @@ Also, make sure when communicating with the server that both **ControllerPi.py**
 the controller server is also active.
 
 ### Startup
-
+(Note: Current Python Version 3.11.2)
 To run this, you want to first activate **EspManager.py**. This is basically the process that will communicate with the Raspberry Pi's. It does this by creating child processes, and each child
 makes a TCP connection with a single ESP, and communicates with the parent back and forth with unnamed pipes. **ControllerPi.py** and **GmServerPi.py** will send relevant information to **EspManager.py**
 through another socket connection. Here's a diagram to explain the purpose of each process a bit better (apologies for the poor quality).
@@ -51,9 +51,11 @@ through another socket connection. Here's a diagram to explain the purpose of ea
 Now to run the Raspberry Pi server, we will first run **EspManager.py**, move that to background, then run **GmServerPi.py**, move that to background, then run **ControllerPi.py**, move that to background,
 and that will be all you need to do. Note that you **MUST** run it in this order, otherwise because of the order of socket connections it won't work properly.
 RECAP:
-1. python EspManager.py
-2. python GmServerPi.py
+1. python EspManager.py (next CTRL+Z to pause, then type "bg" to place process in background)
+2. python GmServerPi.py (next CTRL+Z to pause, then type "bg" to place process in background)
 3. python ControllerPi.py
+(You can use "ps" linux command to check the proccesses that are running, it will have a process id.
+If one of the python programs have an error, then use the linux command "kill -9 [process-#]")
 
 Next, on the website do the npm run bootgame, npm run bootcontrol (run this after bootgame always) npm run dev and stuff. Now,
 get two people to start the game, and profit as you see the robot moving, the updated timer, and the updating score.
