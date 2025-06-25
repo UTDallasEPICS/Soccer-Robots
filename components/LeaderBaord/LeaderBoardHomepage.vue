@@ -1,5 +1,5 @@
 <template>
-<div class="border-black rounded-lg border-4 rounded-b-none w-[22vw] flex flex-col">
+<div class="border-black rounded-lg border-4 rounded-b-none w-[93.125%] flex flex-col">
     <p class="text-center border-b-4 border-black  dark:bg-[#154734]" style="font-weight: bold; font-size: 24px;">
         Leaderboard
     </p>
