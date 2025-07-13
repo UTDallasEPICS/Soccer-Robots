@@ -1,43 +1,73 @@
 <template>
-  <!--Defines video to be embedded into the website-->
   <div class="video-container">
-    <iframe 
-      :src="streamUrl" 
-      frameborder="0" 
-      allowfullscreen="false" 
-      scrolling="no"  
-      allow="autoplay; fullscreen"
-      alt="Live stream"
+    <!-- Twitch Embed -->
+    <iframe
+      v-if="streamType === 'twitch'"
+      :src="twitchEmbedUrl"
+      frameborder="0"
+      allowfullscreen
+      class="stream-frame"
     ></iframe>
+
+    <!-- Janus Embed -->
+    <div v-else-if="streamType === 'janus'" class="stream-frame">
+      <video
+        id="janus-video"
+        autoplay
+        muted
+        playsinline
+        controls
+        ref="janusVideo"
+      ></video>
+    </div>
+
+    <!-- Fallback -->
+    <div v-else class="error-msg">
+      Unknown stream type.
+    </div>
   </div>
 </template>
 
-<script setup lang="ts">
-const runtime = useRuntimeConfig()
-console.log("Runtime config:", runtime)
+<script setup>
+import { ref, onMounted } from 'vue';
 
-const streamUrl = `http://${process.env.PI_ADDR}:${process.env.PI_CAMERA_PORT}/stream.mjpg`
-console.log("Stream URL:", streamUrl)
+const props = defineProps({
+  streamType: {
+    type: String,
+    required: true,
+    validator: (value) => ['twitch', 'janus'].includes(value),
+  },
+});
+
+const janusVideo = ref(null);
+
+const twitchEmbedUrl = 'https://player.twitch.tv/?channel=Soccer_Robots&parent=localhost';
+
+onMounted(() => {
+  if (props.streamType === 'janus') {
+    // Janus WebRTC here
+    // Placeholder for now:
+    console.log('Janus stream to be initialized by awesome pie');
+  }
+});
 </script>
 
 <style scoped>
 .video-container {
-  max-width: 1250px;
+  width: 100%;
+  max-width: 960px;
   margin: auto;
-  border: 5px solid black;
-  border-radius: 20px;
-  overflow: hidden;
-  position: relative;
-  /* padding-top: 56.25%; 16:9 Aspect Ratio */
-  width: 645px;
-  height: 480px;
+  padding: 10px;
 }
 
-.video-container iframe {
-  position: absolute;
-  top: 0;
-  left: 0;
+.stream-frame {
   width: 100%;
-  height: 100%;
+  height: 540px;
+}
+
+.error-msg {
+  color: red;
+  font-weight: bold;
+  text-align: center;
 }
 </style>

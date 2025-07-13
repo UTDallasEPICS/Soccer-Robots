@@ -15,7 +15,7 @@ const prisma = new PrismaClient()
 
 // Environment variables
 dotenv.config({ path: "./.env" })
-const PI_ADDR : string = process.env.PI_ADDR
+const PI_ADDR: string = process.env.PI_ADDR
 const LOCALHOST: string = process.env.LOCALHOST ?? "localhost"
 const PORT_SSE_GM: number = parseInt(`${process.env.PORT_SSE_GM}`)
 const PORT_GM_RASPBERRY: number = parseInt(`${process.env.PORT_GM_RASPBERRY}`)

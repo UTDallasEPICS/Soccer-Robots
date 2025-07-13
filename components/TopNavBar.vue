@@ -1,19 +1,66 @@
-<!--Holds the overall top navigation bar here.-->
+<!-- made cleaner and more minimal look, might get adjusted-->
 <template>
-  <div class="flex flex-nowrap md:flex-grow shrink-0 space-x-3">
-    <div class="utdLogo justify-start" style="width:450px">
-      <!--UTD logo in the navigation bar.-->
-      <img src="../public/UTDLogo.svg">
+  <nav class="top-nav">
+    <div class="logo-container">
+      <img src="public/UTDLogo.svg" alt="UTD Logo" class="logo" />
+      <span class="title">Soccer Robots</span>
     </div>
-    <div class="flex md:flex md:flex-grow flex-row-reverse space-x-3">
-      <TopRightNavbar></TopRightNavbar>
+
+    <div class="nav-links">
+      <button @click="$emit('toggle-about')">About</button>
+      <button @click="$emit('toggle-how')">How to Play</button>
+      <button @click="$emit('toggle-help')">Help</button>
+      <button @click="goToLogin">Log In</button>
     </div>
-  </div>
+  </nav>
 </template>
 
-<script setup lang="ts">
-const showSignUp = ref(false)
-const showLogIn = ref(false)
-
+<script setup>
+const goToLogin = () => {
+  window.location.href = '/api/login'; 
+};
 </script>
-<style></style>
+
+<style scoped>
+.top-nav {
+  width: 100%;
+  padding: 16px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: white;
+  border-bottom: 2px solid #ddd;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  height: 40px;
+  max-height: 60px;
+  width: auto;
+  object-fit: contain;
+}
+.title {
+  font-weight: bold;
+  font-size: 1.25rem;
+  color: #ff6600;
+}
+
+.nav-links button {
+  margin-left: 16px;
+  background-color: #004d26;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+}
+
+.nav-links button:hover {
+  background-color: #006b36;
+}
+</style>
