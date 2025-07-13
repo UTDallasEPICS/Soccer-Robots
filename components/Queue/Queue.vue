@@ -1,6 +1,6 @@
 <!-- template for designing the queue.-->
 <template>
-    <div class="border-black rounded-lg border-4 border-b-0 rounded-b-none" style="width: 93.125%; height: 30.5vh; margin-top: 4%;">
+    <div v-if="isLoggedIn" class="border-black rounded-lg border-4 border-b-0 rounded-b-none" style="width: 93.125%; height: 30.5vh; margin-top: 4%;">
         <p class="text-center border-b-2 border-black border-b-4 dark:bg-[#154734]" style="font-weight: bold; font-size: 24px">Queue</p>
         <div class="overflow-y-auto h-full">
             <!--for every upcoming match, show the queue card.-->
@@ -20,6 +20,9 @@
 </template>
 
 <script setup lang = "ts">
+const sruser = useCookie('sruser');
+const isLoggedIn = computed(() => !!sruser.value)
+
 const emit = defineEmits(["join-queue", "leave-queue"])
 const props = defineProps({
     queueUsers: {type: Array<string>, default: []},
