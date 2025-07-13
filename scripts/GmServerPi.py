@@ -5,12 +5,18 @@ import json
 import time
 import os
 import mmap
+from inspect import signature
 # from backupTag import runTrakcer
 
-#HOST = 'localhost'
-
+# HOST = 'localhost'
+# HOST = ''
 # update this whenever the ip address of the raspberry pi changes. There may exist a way to automatically get the address.
-HOST = '192.168.250.90'
+# HOST = '172.20.10.5'
+# HOST = '192.168.250.96'
+# HOST = '10.42.0.1' # Raspberry Pi self-hotspot
+# HOST = '10.158.225.101'
+# HOST = '172.20.10.6'
+HOST = '192.168.177.101'
 PORT = 1234
 
 espSocketPath = "/tmp/gmESPSocket"
@@ -35,7 +41,7 @@ espSocket.connect(espSocketPath)
 print("connected to esp manager!")
 
 
-async def serverGM(websocket, path):
+async def serverGM(websocket):
     # first time connecting from website, as placeholder say that webiste "sends" the number of players to the esp
 
     espSocket.sendall(num_players.to_bytes(1, "little")) 
@@ -82,7 +88,11 @@ async def serverGM(websocket, path):
         # for debugging, there is a bug where data is seemingly sent as a string instead of a json object
         if(isinstance(received, str)):
             print("bruh it's a string! Its value is: " + received)
+        if(isinstance(received["payload"], str)):
+            print("DEBUG: The received[payload] is a string")
+            print(f"DEBUG: Value of payload: {received['payload']}")
         print(received["payload"], type(received["payload"]))
+        print(f"DEBUG: The value of received[payload][timer] {received['payload']['timer']}")
         game_time = received["payload"]["timer"]
         print("\nTimer:")
         
@@ -120,7 +130,15 @@ async def serverGM(websocket, path):
             # test = runTrakcer()
             # runBackTracking = False
 
-start_server = websockets.serve(serverGM, HOST, PORT)
-print("STARTED GM SERVER")
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+
+async def main():
+    print("STARTED GM SERVER")
+    try:
+        print("serverGM args:" , signature(serverGM))
+        async with websockets.serve(serverGM, HOST, PORT):
+            print("GM server is running and wiating for clients")
+            await asyncio.Future()  # run forever
+    except Exception as err:
+        print("Failed to bind itself: ", err)
+
+asyncio.run(main())
