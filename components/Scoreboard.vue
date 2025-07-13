@@ -53,6 +53,7 @@ const formatTimer = computed(() => {
   height: 9vh;
   margin: 0 auto;
   margin-right: 2rem ;
+  margin-left: 2rem ;
 }
 
 .score-box {
