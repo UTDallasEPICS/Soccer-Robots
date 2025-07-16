@@ -10,7 +10,14 @@
       <button @click="$emit('toggle-about')">About</button>
       <button @click="$emit('toggle-how')">How to Play</button>
       <button @click="$emit('toggle-help')">Help</button>
-      <button @click="goToLogin">Log In</button>
+      <div v-if="!isLoggedIn">
+        <button @click="goToLogin">Log In</button>
+      </div>
+      <div v-if="isLoggedIn">
+        <NuxtLink to="/player">
+          <button>Become Player</button>
+        </NuxtLink>
+      </div>
     </div>
   </nav>
 </template>
@@ -19,6 +26,9 @@
 const goToLogin = () => {
   window.location.href = '/api/login'; 
 };
+
+const sruser = useCookie('sruser');
+const isLoggedIn = computed(() => !!sruser.value)
 </script>
 
 <style scoped>

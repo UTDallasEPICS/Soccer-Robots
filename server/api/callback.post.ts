@@ -16,5 +16,5 @@ export default defineEventHandler(async event => {
     setCookie(event, 'srtoken', srtoken)
   }
   //after doing all this authentication, redirect user to main page
-  await sendRedirect(event, '/')
+  await sendRedirect(event, '/player')
 })

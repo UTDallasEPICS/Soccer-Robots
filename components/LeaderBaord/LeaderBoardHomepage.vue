@@ -30,7 +30,7 @@ let username = getUser.value?.username as string
 
 const topPlayers = computed(() => {
     if (!playerData.value || playerData.value.length === 0) return []
-    return [...playerData.value].sort((a, b) => b.wins - a.wins).slice(0, 4)
+    return [...playerData.value].sort((a, b) => b.wins - a.wins).slice(0, 3)
 })
 
 
