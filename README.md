@@ -44,7 +44,9 @@ the controller server is also active.
 ### Startup
 run start_soccer_robot.sh
 **bash start_soccer_robot.sh**
+
 If you run the script, you do not have to do the following: 
+
 To run this, you want to first activate **EspManager.py**. This is basically the process that will communicate with the Raspberry Pi's. It does this by creating child processes, and each child
 makes a TCP connection with a single ESP, and communicates with the parent back and forth with unnamed pipes. **ControllerPi.py** and **GmServerPi.py** will send relevant information to **EspManager.py**
 through another socket connection. Here's a diagram to explain the purpose of each process a bit better (apologies for the poor quality).
