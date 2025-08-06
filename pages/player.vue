@@ -25,10 +25,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
-// 1️⃣ initialize theme to a safe default
+//  initialize theme to a safe default
 const theme = ref<'light' | 'dark'>('light')
 
-// 2️⃣ only touch localStorage on the client (inside onMounted)
+//  only touch localStorage on the client (inside onMounted)
 function applyTheme() {
   document.documentElement.classList.toggle('dark', theme.value === 'dark')
 }

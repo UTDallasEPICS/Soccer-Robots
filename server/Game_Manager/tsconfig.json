@@ -8,6 +8,6 @@
         "forceConsistentCasingInFileNames": true,
         "outDir": "./dist"
     },
-    "include": ["src/**/*.ts"],
+    "include": ["src/**/*.ts", "../api/login-request.post.ts.ts"],
     "exclude": ["node_modules"]
 }

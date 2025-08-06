@@ -1,52 +1,43 @@
-import jwt from "jsonwebtoken"
-import fs from 'fs'
-import { loginRedirectUrl } from "../api/auth0"
-import { PrismaClient } from "@prisma/client"
+import jwt from "jsonwebtoken" // used to verify JWT tokens
+import { PrismaClient } from "@prisma/client" // access the database
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient() // create a prisma instance
 
-//I believe this code sets the sruser cookie for the player
-export default defineEventHandler(async event => {
+export default defineEventHandler(async (event) => {
+  // attach prisma to the request context so it can be used in other handlers
   event.context.prisma = prisma
-  //try to get security token first
+
+  // get the 'srtoken' cookie, which should contain the jwt token
   const srtoken = getCookie(event, 'srtoken') || ''
-  if(srtoken){
-    //try to verify the 
-    try {
-      //get the decoded srtoken cookie into claims
-      const claims:any = jwt.verify(srtoken, fs.readFileSync(process.cwd() + '/cert-dev.pem'))
-      //if claims exists and it was a number only used once, do the following
-      if(claims instanceof Object && "nonce" in claims){
-        event.context.claims = claims
-        //get Id from the srtoken, and check if it's in prisma
-        const id = claims['sub']
-        const player = await prisma.player.findUnique({
-          where:{
-            user_id: id
-          }, 
-          select: {
-            username: true,
-            role: true
-          } 
-        })
-        //if able to find the player, set the sruser cookie, otherwise leave blank
-        if(player){
-          setCookie(event, 'sruser', JSON.stringify(player))
-        } else {
-          setCookie(event, 'sruser', '')
-        }
-      }
-    }
-    //when fails to decode srtoken cookie. In such a case try to redirect them to login 
-    catch (error) {
-      console.error(error)
-      setCookie(event, 'srtoken', '')
-      return await sendRedirect(event, loginRedirectUrl())
-    }
-  }
-  //if srtoken doesn't exist, set blank cookies 
-  else {
+  if (!srtoken) {
+    // if no token, clear the user cookie and exit early
     setCookie(event, 'sruser', '')
+    return
+  }
+
+  try {
+    // verify the jwt token using the secret key
+    const claims: any = jwt.verify(srtoken, process.env.JWT_SECRET!)
+    // attach decoded claims to the request context
+    event.context.claims = claims
+
+    // fetch the player based on id from the token claims
+    const player = await prisma.player.findUnique({
+      where: { user_id: claims.id },
+      select: { username: true, role: true }
+    })
+
+    if (player) {
+      // if player found, store the player info as a cookie
+      setCookie(event, 'sruser', JSON.stringify(player))
+    } else {
+      // if no player, clear user cookie
+      setCookie(event, 'sruser', '')
+    }
+  } catch (err) {
+    // if token is invalid or expired, clear cookies and log error
+    console.error("JWT verification failed:", err)
     setCookie(event, 'srtoken', '')
+    setCookie(event, 'sruser', '')
   }
 })
