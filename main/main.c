@@ -269,6 +269,8 @@ void doMovement(void *pvParameters)
 		//once we about to start, assume movement interrupt has already been interrupted, so set
 		//to false again
 		interruptMovement = false;
+		//also, assume we just start moving again
+		finishedMoving = false;
 		//assume when we start, we begin moving
 		beginMoving();
 		//this is the look to move the new target
@@ -293,6 +295,8 @@ void doMovement(void *pvParameters)
 			currentDirection[0] = pwmFunction(0, (int16_t) (x/2 - 250));
 			currentDirection[1] = pwmFunction(1, (int16_t) (x/2 - 250));
 			move();	
+			taskYIELD();
+
 			//if we're given command to interrupt movement due to new keys before we finish, break anyways
 			if(interruptMovement)
 			{
@@ -382,7 +386,7 @@ static void on_receive(const int sock)
 					sendMessage(sock, "ready");
 					inGame = true;
 					//set up movement as we about to begin the game
-					xTaskCreate(doMovement, "doMovement", 8192, NULL, 5, &doMovementHandle);
+					xTaskCreate(doMovement, "doMovement", 8192, NULL, 3, &doMovementHandle);
 				}
 				continue;
 			}
@@ -419,6 +423,7 @@ static void on_receive(const int sock)
 			//always give semaphore, as it's a possible race condition still that we mmight interrupt movement and then in our movement task before
 			//we do the break we stop moving. It's a binary semaphore so it's not a big deal
 			xSemaphoreGive(waitForData);
+			
             // send() can return less bytes than supplied length.
             // Walk-around for robust implementation.
             
@@ -698,7 +703,7 @@ void app_main() {
 		/* 		1,				// Priority */
 		/* 		NULL //handle to delete task
 		); */
-		xTaskCreate(taskServer, "taskServer", 4096, (void*)AF_INET, 4, NULL);
+		xTaskCreate(taskServer, "taskServer", 4096, (void*)AF_INET, 3, NULL);
 	}
 
 	vTaskDelay(pdMS_TO_TICKS(500));

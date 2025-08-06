@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/mahd/Documents/SoccerRobotsESP32/main
+# Install script for directory: C:/Users/mahd/Documents/esp/main
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

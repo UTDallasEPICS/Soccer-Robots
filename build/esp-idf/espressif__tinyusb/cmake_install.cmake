@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/mahd/Documents/SoccerRobotsESP32/managed_components/espressif__tinyusb
+# Install script for directory: C:/Users/mahd/Documents/esp/managed_components/espressif__tinyusb
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
