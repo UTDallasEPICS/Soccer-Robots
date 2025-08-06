@@ -11,7 +11,7 @@
         <Scoreboard :timer="Number(timer ?? 0)" :user1="player1?.username ?? ''" :user2="player2?.username ?? ''" :user1score="player1?.score ?? 0 " :user2score="player2?.score ?? 0"></Scoreboard>
         <span class="py-4">
 
-                    <VideoStream></VideoStream>
+                    <VideoStream streamType="twitch"></VideoStream>
                 </span>
       </div>
       <!--when user tries to join or leave queue, run the according functions in this file.-->
@@ -22,8 +22,12 @@
 
 </template>
 
+
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router';
+
+const router = useRouter()
 
 // 1️⃣ initialize theme to a safe default
 const theme = ref<'light' | 'dark'>('light')
@@ -91,7 +95,6 @@ const joinQueue = () => {
     console.log("WebSocket connection closed")
   }
 
-
   //when the server sends the client a message
   ws_queue.value.onmessage = (event) => {
     const { type, payload } = JSON.parse(event.data)
@@ -112,6 +115,9 @@ const joinQueue = () => {
       confirmationRequest.value = false
       accesspassword.value = payload
       document.cookie = "accesspassword=" + accesspassword.value
+
+      router.push("/inGame")
+      /*
       ws_controller.value = new WebSocket(`ws://${useRuntimeConfig().public.LOCALHOST}:${useRuntimeConfig().public.PORT_WSS_CONTROLLER_CLIENT}`)
       
       ws_controller.value.onopen = (event) => {
@@ -152,7 +158,7 @@ const joinQueue = () => {
             window.removeEventListener("keydown", updateKeyDown)
           }
         }
-      }
+      }*/
     }
   }
   //when the socket to the queue server is first opened, send a message that the client was to join the queue
@@ -189,6 +195,7 @@ const confirmMatch = (accepted: boolean) => {
       payload: {"password": confirmationPassword.value, "accepted": accepted}
     }))
   }
+  confirmationRequest.value = false
 }
 
 //This one is for when the game manager sends data.
