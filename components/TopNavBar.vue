@@ -7,10 +7,21 @@
     </div>
 
     <div class="nav-links">
-      <button @click="$emit('toggle-about')">About</button>
+      <div v-if="isGuest">
+        <button @click="$emit('toggle-about')">About</button>
+      </div>
       <button @click="$emit('toggle-how')">How to Play</button>
       <button @click="$emit('toggle-help')">Help</button>
-      <button @click="goToLogin">Log In</button>
+      <div v-if="isGuest">
+        <div v-if="!isLoggedIn">
+          <button @click="goToLogin">Log In</button>
+        </div>
+        <div v-if="isLoggedIn">
+          <NuxtLink to="/player">
+            <button>Become Player</button>
+          </NuxtLink>
+        </div>
+      </div>
     </div>
   </nav>
 </template>
@@ -19,6 +30,15 @@
 const goToLogin = () => {
   window.location.href = '/api/login'; 
 };
+
+const sruser = useCookie('sruser');
+const isLoggedIn = computed(() => !!sruser.value)
+
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+const isGuest = computed(() => route.path === '/' || route.name === 'guest')
+
 </script>
 
 <style scoped>
