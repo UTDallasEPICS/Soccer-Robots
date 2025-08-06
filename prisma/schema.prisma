@@ -16,6 +16,8 @@ model Player {
   user_id  String @id
   username String @unique
   email    String @unique
+  magicToken String? @unique
+  tokenExpiry DateTime?
   wins     Int @default(0)
   goals    Int @default(0)
   games    Int @default(0)

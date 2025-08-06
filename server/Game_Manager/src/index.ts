@@ -9,6 +9,9 @@ import fs from "fs"
 import { PrismaClient } from "@prisma/client"
 import { nanoid } from "nanoid"
 import type {Player as PlayerType} from "@prisma/client" 
+import authRoutes from "../../api/login-request.post.ts"
+app.use(authRoutes)
+
 
 
 const prisma = new PrismaClient()

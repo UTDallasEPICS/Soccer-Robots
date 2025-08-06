@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: "Invalid or expired token" })
   }
 
-  // Clear token so it can't be reused
+  // Clear token so it can't be reuse
   await prisma.player.update({
     where: { user_id: player.user_id },
     data: {
