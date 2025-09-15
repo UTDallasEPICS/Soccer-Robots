@@ -37,7 +37,7 @@
     "@types/uuid": "^9.0.8",
     "@types/ws": "^8.5.10",
     "prisma": "^5.22.0",
-    "prisma-erd-generator": "^1.11.2",
+    "prisma-erd-generator": "^2.1.0",
     "tsx": "^4.7.2",
     "typescript": "^5.4.5"
   }
