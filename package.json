@@ -28,7 +28,7 @@
     "ws": "^8.16.0"
   },
   "devDependencies": {
-    "@mermaid-js/mermaid-cli": "^11.2.0",
+    "@mermaid-js/mermaid-cli": "^11.10.1",
     "@nuxtjs/tailwindcss": "^6.11.4",
     "@prisma/client": "^5.20.0",
     "@types/cors": "^2.8.17",
