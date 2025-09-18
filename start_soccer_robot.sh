@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Move to the project root
-cd "$(Soccer-Robots "$0")" || {
-  echo "Could not move into project directory"
-  exit 1
-}
+# cd "$(Soccer-Robots "$0")" || {
+#   echo "Could not move into project directory"
+#   exit 1
+# }
 
 
-mkdir logs -p
+mkdir -p logs
 
 # Start EspManager.py
 echo "Starting EspManager.py"

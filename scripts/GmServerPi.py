@@ -8,7 +8,7 @@ import mmap
 from inspect import signature
 # from backupTag import runTrakcer
 
-# HOST = 'localhost'
+HOST = 'localhost'
 # HOST = ''
 # update this whenever the ip address of the raspberry pi changes. There may exist a way to automatically get the address.
 # HOST = '172.20.10.5'
@@ -16,7 +16,7 @@ from inspect import signature
 # HOST = '10.42.0.1' # Raspberry Pi self-hotspot
 # HOST = '10.158.225.101'
 # HOST = '172.20.10.6'
-HOST = '192.168.177.101'
+# HOST = '192.168.177.101'
 PORT = 1234
 
 espSocketPath = "/tmp/gmESPSocket"

@@ -9,13 +9,13 @@ import socket
 def on_publish(client, userdata, mid):
     print("Published to esp32")
 
-# HOST = 'localhost'
+HOST = 'localhost'
 # HOST = '192.168.250.96'
 # HOST = '10.42.0.1' # Raspberry Pi self-hotspot
 # HOST = '172.20.10.5'
 # HOST = ''
 # HOST = '10.158.225.101'
-HOST = '192.168.177.101'
+# HOST = '192.168.177.101'
 PORT = 1235
 
 controlSocketPath = "/tmp/controlESPSocket"
