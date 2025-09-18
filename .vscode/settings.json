@@ -1,8 +1,0 @@
-{
-    "idf.flashType": "UART",
-    "idf.portWin": "COM20",
-    "files.associations": {
-        "type_traits": "c",
-        "xutility": "c"
-    }
-}
