@@ -34,9 +34,7 @@ After turning on the Pi and connecting to the internet, use your terminal to SSH
 
 NOTE: when attempting to run the servers, you'll need to activate the virtual
 environment (which includes things like the libraries used). To activate this,
-find the folder called "my-env". Inside that directory is another folder called "bin",
-and inside of that is a file called activate. You need to call "source activate" to activate
-the virtual environment.
+create a Python (3.11) virtual environment from the requirements.txt file.
 
 Also, make sure when communicating with the server that both **ControllerPi.py** and **GmServerPi.py** are active. Even if you're just testing the GM server, it will appear to not work unless
 the controller server is also active.
