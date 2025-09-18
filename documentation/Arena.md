@@ -1,5 +1,5 @@
-Arena Size:
+Arena Inner Size:
 92" by 92"
 
-Estimate Size:
+Estimate Corner Triangle Size:
 16" to 18"
