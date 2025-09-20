@@ -1,0 +1,349 @@
+import io
+import logging
+import socket
+import socketserver
+from http import server
+from threading import Condition
+import cv2
+import numpy as np
+from pupil_apriltags import Detector
+import picamera2
+from picamera2.encoders import JpegEncoder
+from picamera2.outputs import FileOutput
+from libcamera import Transform
+import threading
+import multiprocessing
+from multiprocessing import Process, Queue
+import time
+
+# Global variables for charging station status and instructions
+car_at_station = False
+car_charging = False
+current_instruction = "Waiting for tag..."
+
+# Charging station coordinates
+station_x_min, station_x_max = 20, 100
+station_y_min, station_y_max = 80, 160
+
+# Station center and tolerance (more lenient)
+station_cx = (station_x_min + station_x_max) // 2  # 60
+station_cy = (station_y_min + station_y_max) // 2  # 120
+station_tolerance = 20  # lenient tolerance
+
+# Radius for station center dot
+station_center_radius = 3
+
+PAGE = """\
+<html>
+<head>
+<title>Picamera2 MJPEG Streaming with AprilTag Detection</title>
+<style>
+#status, #instruction {
+    font-size: 20px;
+    font-weight: bold;
+    margin: 10px 0;
+}
+</style>
+<script type="text/javascript">
+function updateStatus() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "/status", true);
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            document.getElementById('status').innerText = xhr.responseText;
+        }
+    };
+    xhr.send();
+}
+
+function updateInstruction() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "/instruction", true);
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            document.getElementById('instruction').innerText = xhr.responseText;
+        }
+    };
+    xhr.send();
+}
+
+// Update status and instruction every second
+setInterval(updateStatus, 1000);
+setInterval(updateInstruction, 1000);
+</script>
+</head>
+<body>
+<h1>Picamera2 MJPEG Streaming with AprilTag Detection</h1>
+<div id="status">Loading status...</div>
+<img src="stream.mjpg" width="640" height="480" />
+<p>Automatic navigation to the charging station in progress...</p>
+<div id="instruction">Loading instruction...</div>
+</body>
+</html>
+"""
+
+class StreamingOutput:
+    def __init__(self):
+        self.frame = None
+        self.condition = Condition()
+        
+    def set_frame(self, frame):
+        with self.condition:
+            self.frame = frame
+            self.condition.notify_all()
+
+class StreamingHandler(server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        global car_at_station, car_charging, current_instruction
+        if self.path == '/':
+            self.send_response(301)
+            self.send_header('Location', '/index.html')
+            self.end_headers()
+        elif self.path == '/index.html':
+            content = PAGE.encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html')
+            self.send_header('Content-Length', len(content))
+            self.end_headers()
+            self.wfile.write(content)
+        elif self.path == '/stream.mjpg':
+            self.send_response(200)
+            self.send_header('Age', 0)
+            self.send_header('Cache-Control', 'no-cache, private')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
+            self.end_headers()
+            try:
+                while True:
+                    with output.condition:
+                        output.condition.wait()
+                        frame = output.frame
+                    self.wfile.write(b'--FRAME\r\n')
+                    self.send_header('Content-Type', 'image/jpeg')
+                    self.send_header('Content-Length', len(frame))
+                    self.end_headers()
+                    self.wfile.write(frame)
+                    self.wfile.write(b'\r\n')
+            except Exception as e:
+                logging.warning(
+                    'Removed streaming client %s: %s',
+                    self.client_address, str(e))
+        elif self.path == '/status':
+            if car_charging:
+                status_text = "car at charging station and charging"
+            elif car_at_station:
+                status_text = "car at charging station but not charging"
+            else:
+                status_text = "car not at charging station"
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(status_text.encode('utf-8'))
+        elif self.path == '/instruction':
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(current_instruction.encode('utf-8'))
+        else:
+            self.send_error(404)
+            self.end_headers()
+
+class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = "localhost"
+    finally:
+        s.close()
+    return ip
+
+def apriltag_process(frame_queue, result_queue, camera_params, tag_size):
+    at_detector = Detector(
+        families="tag36h11",
+        nthreads=4,
+        quad_decimate=2.0,
+        quad_sigma=0.0,
+        refine_edges=1,
+        decode_sharpening=0.25,
+        debug=0
+    )
+    while True:
+        frame = frame_queue.get()
+        if frame is None:
+            break
+        img_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        tags = at_detector.detect(img_gray, estimate_tag_pose=True, camera_params=camera_params, tag_size=tag_size)
+        result_queue.put((frame, tags))
+
+def distance_point_to_line_segment(px, py, x1, y1, x2, y2):
+    # Computes the distance from a point P(px,py) to the line segment A(x1,y1)-B(x2,y2)
+    dx = x2 - x1
+    dy = y2 - y1
+    if dx == 0 and dy == 0:
+        # A and B are the same point
+        return np.sqrt((px - x1)**2 + (py - y1)**2)
+    t = ((px - x1)*dx + (py - y1)*dy) / (dx*dx + dy*dy)
+    t = max(0, min(1, t))
+    closest_x = x1 + t*dx
+    closest_y = y1 + t*dy
+    dist = np.sqrt((px - closest_x)**2 + (py - closest_y)**2)
+    return dist
+
+def line_intersects_dot(x1, y1, x2, y2, cx, cy, radius):
+    # Check if line segment (x1,y1)-(x2,y2) passes within 'radius' pixels of (cx,cy)
+    dist = distance_point_to_line_segment(cx, cy, x1, y1, x2, y2)
+    return dist <= radius
+
+def main():
+    global output, car_at_station, car_charging, current_instruction
+
+    output = StreamingOutput()
+
+    # Camera parameters (adjust as needed)
+    fx = 300
+    fy = 300
+    cx = 160
+    cy = 120
+    camera_params = [fx, fy, cx, cy]
+    tag_size = 0.16
+
+    frame_queue = Queue(maxsize=2)
+    result_queue = Queue(maxsize=2)
+
+    process = Process(target=apriltag_process, args=(frame_queue, result_queue, camera_params, tag_size))
+    process.start()
+
+    picam2_inst = picamera2.Picamera2()
+    config = picam2_inst.create_video_configuration(
+        main={"size": (320, 240), "format": "RGB888"},
+        transform=Transform(vflip=True, hflip=True)
+    )
+    picam2_inst.configure(config)
+    picam2_inst.start()
+
+    def capture_frames():
+        global car_at_station, car_charging, current_instruction
+
+        while True:
+            frame = picam2_inst.capture_array()
+            if not frame_queue.full():
+                frame_queue.put(frame)
+            processed_frame = frame
+            tags = []
+            if not result_queue.empty():
+                processed_frame, tags = result_queue.get()
+
+            # Draw the charging station box
+            cv2.rectangle(processed_frame, (station_x_min, station_y_min), (station_x_max, station_y_max), (255, 0, 0), 2)
+            cv2.putText(processed_frame, "Charging Station", (station_x_min, station_y_min - 10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 1)
+            # Draw the station center dot
+            cv2.circle(processed_frame, (station_cx, station_cy), station_center_radius, (255, 0, 255), -1)
+
+            move_instruction = None
+
+            if car_charging:
+                # Already charging, no movement needed
+                move_instruction = None
+                current_instruction = "Stop (at station and charging)"
+            else:
+                # Not charging yet
+                if len(tags) > 0:
+                    tag = tags[0]
+                    corners = tag.corners.astype(int)
+                    cX = int((corners[0, 0] + corners[2, 0]) / 2)
+                    cY = int((corners[0, 1] + corners[2, 1]) / 2)
+
+                    top_x0, top_y0 = corners[0]
+                    top_x1, top_y1 = corners[1]
+
+                    midX = (top_x0 + top_x1) // 2
+                    midY = (top_y0 + top_y1) // 2
+
+                    dx = top_x1 - top_x0
+                    dy = top_y1 - top_y0
+                    length = np.sqrt(dx*dx + dy*dy)
+                    if length < 1: length = 1
+                    perp_x = dy / length
+                    perp_y = -dx / length
+
+                    line_length = 1000
+                    line_endX = int(midX + perp_x * line_length)
+                    line_endY = int(midY + perp_y * line_length)
+
+                    # Draw tag info
+                    cv2.polylines(processed_frame, [corners], True, (0, 255, 0), thickness=2)
+                    cv2.putText(processed_frame, f"id={tag.tag_id}", (cX, cY - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
+                    cv2.putText(processed_frame, f"x={cX}, y={cY}", (cX, cY + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
+                    cv2.line(processed_frame, (midX, midY), (line_endX, line_endY), (0,0,255), 2)
+
+                    # Check if at station position
+                    at_station_position = (abs(cX - station_cx) <= station_tolerance and abs(cY - station_cy) <= station_tolerance)
+
+                    # Calculate angle of the red line (we want it close to 0°)
+                    angle = np.degrees(np.arctan2(perp_y, perp_x))
+                    angle = (angle + 180) % 360 - 180
+
+                    if not at_station_position:
+                        # Not at station yet
+                        car_at_station = False
+                        # Check if the red line intersects with the station dot
+                        facing_station = line_intersects_dot(midX, midY, line_endX, line_endY, station_cx, station_cy, station_center_radius)
+                        if facing_station:
+                            # Move forward
+                            move_instruction = 1
+                            current_instruction = "Move Forward"
+                        else:
+                            # Rotate left
+                            move_instruction = 4
+                            current_instruction = "Rotate Left"
+                    else:
+                        # At station position now
+                        car_at_station = True
+                        # Once at station, no more forward or line checks
+                        # Only rotate until aligned
+                        if abs(angle) < 10:
+                            # Aligned, now charging
+                            car_charging = True
+                            move_instruction = None
+                            current_instruction = "Stop (at station and charging)"
+                        else:
+                            # Rotate left until angle ~0°
+                            move_instruction = 4
+                            current_instruction = "Rotate Left (Aligning)"
+                else:
+                    # No tags
+                    car_at_station = False
+                    car_charging = False
+                    current_instruction = "No tag detected"
+                    move_instruction = None
+
+            if move_instruction is not None:
+                print(f"Move instruction: {move_instruction}")
+
+            # Encode frame as JPEG
+            ret, jpeg = cv2.imencode('.jpg', processed_frame)
+            if ret:
+                output.set_frame(jpeg.tobytes())
+
+    threading.Thread(target=capture_frames, daemon=True).start()
+
+    try:
+        address = ('', 8000)
+        ip = get_ip_address()
+        print(f"\nStarting server at http://{ip}:8000\n")
+        server = StreamingServer(address, StreamingHandler)
+        server.serve_forever()
+    finally:
+        picam2_inst.stop()
+        process.terminate()
+        process.join()
+
+if __name__ == '__main__':
+    main()
