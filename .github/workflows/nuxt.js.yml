@@ -18,6 +18,7 @@ on:
 
 env:
   PRISMA_DB_URL: "file:dev.db"
+  DISABLE_ERD: true
 jobs:
   # Build job
   build:
