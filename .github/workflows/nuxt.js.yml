@@ -44,7 +44,7 @@ jobs:
         run: npm ci
       - name: Create Prisma Generator
         run: |
-          if ! [ grep -q '^model*' ${{ github.workspace }}/prisma/schema.prisma ]; then
+          if ! grep -q '^model*' ${{ github.workspace }}/prisma/schema.prisma ; then
             npx prisma generate
           else
             echo "No models defined in 'prisma.schema'. Prisma Client NOT generated"
