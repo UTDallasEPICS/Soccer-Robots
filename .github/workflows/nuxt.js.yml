@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: "lts/Hydrogen"
+          node-version: "lts/Iron"
           cache: npm
       - name: Restore cache
         uses: actions/cache@v3
