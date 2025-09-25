@@ -48,7 +48,8 @@ If you run the script, you do not have to do the following:
 To run this, you want to first activate **EspManager.py**. This is basically the process that will communicate with the Raspberry Pi's. It does this by creating child processes, and each child
 makes a TCP connection with a single ESP, and communicates with the parent back and forth with unnamed pipes. **ControllerPi.py** and **GmServerPi.py** will send relevant information to **EspManager.py**
 through another socket connection. Here's a diagram to explain the purpose of each process a bit better (apologies for the poor quality).
-![image](https://github.com/user-attachments/assets/55c1ff86-75d5-41fe-a101-83da67798dfa)
+<img width="4445" height="3950" alt="better diagram" src="https://github.com/user-attachments/assets/e2b624f2-6dc2-4511-8342-c66bf52103d8" />
+
 
 Now to run the Raspberry Pi server, we will first run **EspManager.py**, move that to background, then run **GmServerPi.py**, move that to background, then run **ControllerPi.py**, move that to background,
 and that will be all you need to do. Note that you **MUST** run it in this order, otherwise because of the order of socket connections it won't work properly.
