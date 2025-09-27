@@ -130,7 +130,11 @@ This is basically exactly like the above, but now if you put an april tag in fro
 
 ## backtracking.py
 
-There isn't any file naemd this, I assume it's just backTest.py. This seems to first do the same as above, streaming it but also showing the april tag on the screen. Right now, it puts the movemenetinstruction on the frame, so ideally the only thing that needs to be done is sending it. It seems right now ti's configured to send 2 pieces of data to the motor: first, the direction of movement (rotationg left, rotating right, moving backwards, moving forwards, stopping) as well has how much to rotae in each direciton. Now, main issue will be configuring that to become packets to send to the esp32. Have fun with that! Also note that each car has 4 states. State 0 is rotating to face target, state 1 is moring towards target, state 2 is doing final rotation, and state 3 means finished arriving and rotating at charigng station.
+There isn't any file named  this, I assume it's just backTest.py. This seems to first do the same as above, streaming it but also showing the april tag on the screen. Right now, it puts the movement instruction on the frame, so ideally the only thing that needs to be done is sending it. 
+
+It seems right now it's configured to send 2 pieces of data to the motor: first, the direction of movement (rotationg left, rotating right, moving backwards, moving forwards, stopping) as well has how much to rotate in each direciton. Now, main issue will be configuring that to become packets to send to the esp32. Have fun with that! 
+
+Also note that each car has 4 states. State 0 is rotating to face target, state 1 is moring towards target, state 2 is doing final rotation, and state 3 means finished arriving and rotating at charigng station.
 
 ## backupTag.py
 
