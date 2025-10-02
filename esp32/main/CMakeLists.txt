@@ -1,2 +1,3 @@
-idf_component_register(SRCS "unnededFile.c" "main.c" "wifi_connectivity.c"
-                    INCLUDE_DIRS ".")
+idf_component_register(
+    SRC_DIRS "src"
+    INCLUDE_DIRS "include")
