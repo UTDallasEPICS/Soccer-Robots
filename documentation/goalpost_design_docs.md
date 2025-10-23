@@ -1,5 +1,5 @@
 Main objective was to come up with goalpost design, so I created 2.
-## From 9/11 to 9/18
+
 ### goalpost.SLDPRT
 - Simplified design of Su25, made bigger about 15in wide to accommodate ball and bigger robots.
 - Box style design, ball exits on the side
@@ -13,3 +13,6 @@ Main objective was to come up with goalpost design, so I created 2.
 ### 3D Printing
 - Need to 3D print one of these, Bambu Studio has tools to break this into parts but need to familiarize myself
 - Also need a 3D printer, EPICS lab one is kind of small so try to get access to something else to speed things up
+### launcher_assembly.SLDASM
+- Uses a "flywheel" to launch the ball, much like tennis ball launchers
+- The "wheel" in this model is a LEGO 56x26 tire, part number 55976
