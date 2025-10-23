@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
     //now gets player with their user id, and updates their username 
     const player = await prisma.player.update({
       where: {
-        user_id: claims['sub'],
+        user_id: claims['id'],
       },
       data: {
         username,
