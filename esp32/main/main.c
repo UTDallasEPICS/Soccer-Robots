@@ -695,6 +695,14 @@ void app_main() {
 
 	vTaskDelay(pdMS_TO_TICKS(3000));
 	if (wifi_setup_init()){
+		/* xTaskCreate( */
+		/* 		taskClient, */
+		/* 		"taskClient", */
+		/* 		8192,			// Stack Size */
+		/* 		NULL,			// Parameters */
+		/* 		1,				// Priority */
+		/* 		NULL //handle to delete task
+		); */
 		xTaskCreate(taskServer, "taskServer", 4096, (void*)AF_INET, 3, NULL);
 	}
 

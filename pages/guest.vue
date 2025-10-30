@@ -33,14 +33,14 @@
 import { ref, onMounted } from 'vue';
 import { useRuntimeConfig } from '#app';
 
-import TopNavBar from '@/components/NavBars/TopNavBar.vue';
-import Scoreboard from '@/components/Gameplay/Scoreboard.vue';
-import VideoStream from '@/components/Gameplay/VideoStream.vue';
+import TopNavBar from '@/components/TopNavBar.vue';
+import Scoreboard from '@/components/Scoreboard.vue';
+import VideoStream from '@/components/VideoStream.vue';
 import ReadOnlyQueue from '@/components/Queue/ReadOnlyQueue.vue';
 
-import HelpOverlay from '@/components/Popups/HelpOverlay.vue';
-import AboutUsOverlay from '@/components/Popups/AboutUsOverlay.vue';
-import HowToPlayOverlay from '@/components/Popups/HowToPlayOverlay.vue';
+import HelpOverlay from '@/components/HelpOverlay.vue';
+import AboutUsOverlay from '@/components/AboutUsOverlay.vue';
+import HowToPlayOverlay from '@/components/HowToPlayOverlay.vue';
 
 const showHelp = ref(false);
 const showAbout = ref(false);

@@ -29,12 +29,12 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router'
 import { useRuntimeConfig } from '#app';
 
-import TopNavBar from '~/components/NavBars/TopNavBar.vue';
-import Scoreboard from '~/components/Gameplay/Scoreboard.vue';
-import VideoStream from '~/components/Gameplay/VideoStream.vue';
+import TopNavBar from '@/components/TopNavBar.vue';
+import Scoreboard from '@/components/Scoreboard.vue';
+import VideoStream from '@/components/VideoStream.vue';
 
-import HelpOverlay from '~/components/Popups/HelpOverlay.vue';
-import HowToPlayOverlay from '~/components/Popups/HowToPlayOverlay.vue';
+import HelpOverlay from '@/components/HelpOverlay.vue';
+import HowToPlayOverlay from '@/components/HowToPlayOverlay.vue';
 
 const showHelp = ref(false);
 const showHowToPlay = ref(false);

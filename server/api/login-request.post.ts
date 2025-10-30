@@ -26,7 +26,6 @@ export default defineEventHandler(async (event) => {
   const token = nanoid(32)
   const expiry = new Date(Date.now() + 10 * 60 * 1000)
 
-
   await prisma.player.update({
     where: { email },
     data: {
@@ -34,8 +33,6 @@ export default defineEventHandler(async (event) => {
       tokenExpiry: expiry
     }
   })
-
-  console.log("updated player:", player);
 
   const loginLink = `http://localhost:3000/login?token=${token}`
 

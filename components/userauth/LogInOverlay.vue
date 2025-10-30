@@ -69,7 +69,7 @@ const handleSubmit = async () => {
   //if username valid, try to set it.
 
   const req:string = await $fetch('api/user', {
-    method:'put',
+    method: props.isChangingUsername ? 'put' : 'post',
     body: {
       username: username.value
     }

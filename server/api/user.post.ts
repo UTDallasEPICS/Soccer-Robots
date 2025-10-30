@@ -16,10 +16,9 @@ export default defineEventHandler(async (event) => {
   //if they aren't in the database, put them in the database
   if(!existingUsername){
     //create player in database with their username, unique user_id, and email. Returns the username and role fields of the user.
-    console.log("Claims:", claims);
     const player = await prisma.player.create({
       data: {
-        user_id: claims['id'],
+        user_id: claims['sub'],
         username,
         email: claims['email']
       },

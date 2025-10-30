@@ -20,26 +20,13 @@
 </template>
 
 <script setup lang="ts">
-import { navigateTo } from '#app'
-
     import type { Player } from '@prisma/client'
     //to get play info like username, we use the cookie we have of them and find their username from it
     const getUser = useCookie<Partial<Player>>('sruser')
     let username = getUser.value?.username as string
-    //clear cookis and send user to homepage
+    //send the user to the logout page.
     const logout = async () => { 
-         try {
-
-            await $fetch('/api/user.logout', { method: 'POST' })
-
-            document.cookie = 'sruser=; Max-Age=0; path=/;'
-
-
-            await navigateTo('/')
-
-        } catch (error) {
-            console.error("Logout failed:", error);
-        }
+        window.location.href='api/logout'
     }
 </script>
 
