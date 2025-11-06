@@ -3,9 +3,18 @@ When installing Janus, enable websockets.
 The .jcfg files are new config files for Janus implementation. They can be found at /opt/janus/etc/janus once you have Janus installed.
 There are still some problems with the test website (index.html) but its able to be viewed through the Janus streaming demo.
 
-To test GStreamer: "gst-launch-1.0 libcamerasrc ! video/x-raw,colorimetry=bt709,format=NV12,width=1280,height=720,framerate=30/1 ! queue ! jpegenc ! multipartmux ! tcpserversink host=127.0.0.1 port=5000"
+
+
+run:
+
+To test GStreamer: "gst-launch-1.0 libcamerasrc ! video/x-raw,colorimetry=bt709,format=NV12,width=1280,height=720,framerate=30/1 ! videoconvert ! vp8enc deadline=1 ! rtpvp8pay pt=96 ! udpsink host=127.0.0.1 port=5000"
 To run Janus: "/opt/janus/bin/janus"
+
+cd into Soccer-Robots/streaingTesting/janus-gateway/html
 To test webpages: "python -m http.server 8080"
+
+For problems regarding the port, cd into /opt/janus/etc/janus
+vim into janus.plugin.streaming.jcfg
 
 I would recommend opening new terminals for each to see the logs.
 
