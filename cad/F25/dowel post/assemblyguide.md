@@ -10,4 +10,4 @@
 3. Insert into PVC pipe slots in 3D print
 4. Put elbow connectors on top end of the pipe you just placed down
 5. Cut PVC to approximate length to connect all elbows, trim down as needed
-6. Once all pipes fitted, remove them and assemble with superglue
+6. Once all pipes fitted, remove them and assemble (putting sensor holders on as well) with superglue
