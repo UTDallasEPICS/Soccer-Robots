@@ -29,7 +29,7 @@ To broadcast the hotspot, run the following command to create a hotspot, replaci
 
 ### Accessing the Raspberry Pi
 
-After turning on the Pi and connecting to the internet, use your terminal to SSH into the Pi by typing <username>@<ipaddress>, where "timthegoat" is the current username and the ipaddress is your local Pi address shown below(NOTE: Once hotspot is setup this will default to 10.42.0.1).
+After turning on the Pi and connecting to the internet, use your terminal to SSH into the Pi by typing [username]@[ipaddress], where "timthegoat" is the current username and the ipaddress is your local Pi address shown below(NOTE: Once hotspot is setup this will default to 10.42.0.1).
 ![image](https://github.com/user-attachments/assets/e83135cc-39a2-4ad9-8e8b-7ac2651071df)
 
 NOTE: when attempting to run the servers, you'll need to activate the virtual
