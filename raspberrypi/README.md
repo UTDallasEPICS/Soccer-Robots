@@ -23,9 +23,9 @@ Ensure you have the right developer tools.
 **sudo apt install -y build-essential bc dkms git**
 
 ### Starting the hotspot
-To broadcast the hotspot, run the following command to create a hotspot, replacing the <hotspot name> and <hotspot password> placeholders with a hotspot name and password of your choice
+To broadcast the hotspot, run the following command to create a hotspot, replacing the [hotspot name] and [hotspot password] placeholders with a hotspot name and password of your choice
 
-**$ sudo nmcli device wifi hotspot ssid <hotspot name> password <hotspot password> ifname wlan1**
+**$ sudo nmcli device wifi hotspot ssid [hotspot name] password [hotspot password] ifname wlan1**
 
 ### Accessing the Raspberry Pi
 
