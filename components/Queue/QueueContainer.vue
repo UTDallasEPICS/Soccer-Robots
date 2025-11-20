@@ -12,7 +12,7 @@
 
 <script setup lang="ts">
 //need to pass in the queue of all users here.
-  import Upcoming from '@/components/UpComing.vue'
+  import Upcoming from '~/components/Gameplay/UpComing.vue'
 
   const props = defineProps({
   queueUsers: { type: Array<string>, default: [] },

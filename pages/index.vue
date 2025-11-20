@@ -38,8 +38,25 @@
 const sruser = useCookie('sruser');
 const isLoggedIn = computed(() => !!sruser.value)
 
-const goToLogin = () => {
-  window.location.href = '/api/login'; 
+const goToLogin = async () => {
+
+  const email = prompt("Please enter your email address:");
+  if (!email) {
+    alert("Email is required to log in.");
+    return;
+  }
+
+  try {
+    await $fetch('/api/login-request', {
+      method: 'POST',
+      body: { email }
+    });
+    alert("Login link sent! Please check your email.");
+  } catch (error) {
+    console.error("Error requesting login link:", error);
+    alert("Failed to send login link. Please try again later.");
+  }
+  
 };
 
 </script>
