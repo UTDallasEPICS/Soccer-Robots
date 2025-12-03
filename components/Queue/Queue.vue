@@ -64,6 +64,7 @@ const changeButton = () => {
     //if button is teal and it's pressed, have user join queue and change color to read.
     if(buttonColor.value == '#5FE0B7')
     {
+        console.log("🟢 Emitting join-queue event")
         emit("join-queue")
         buttonColor.value = '#FF0000';
         buttonStatus.value = 'Leave Queue';
@@ -71,6 +72,8 @@ const changeButton = () => {
     //if button is red (in queue) and its pressed, have user leave queue and change color to teal.
     else
     {
+
+        console.log("🔴 Emitting leave-queue event")
         emit("leave-queue")
         buttonColor.value = '#5FE0B7'
         buttonStatus.value = 'Join Queue';

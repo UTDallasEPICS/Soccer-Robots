@@ -28,13 +28,10 @@ import { navigateTo } from '#app'
     let username = getUser.value?.username as string
     //clear cookis and send user to homepage
     const logout = async () => { 
+        console.log("Logging out user from Profile.vue");
          try {
 
-            await $fetch('/api/user.logout', { method: 'POST' })
-
-            document.cookie = 'sruser=; Max-Age=0; path=/;'
-
-
+            await $fetch('/api/user-logout', { method: 'POST' })
             await navigateTo('/')
 
         } catch (error) {

@@ -4,11 +4,9 @@ import cors from "cors"
 import { WebSocket, WebSocketServer } from "ws"
 import { createServer, IncomingMessage } from "http"
 // import { createServer } from "https"
-import jwt from "jsonwebtoken"
-import fs from "fs"
 import { PrismaClient } from "@prisma/client"
 import { nanoid } from "nanoid"
-import type {Player as PlayerType} from "@prisma/client" 
+import type {Player as PlayerType} from "@prisma/client"
 
 const prisma = new PrismaClient()
 
@@ -110,7 +108,7 @@ const gameCycle = setInterval( async () => {
             }
 
             //checks if the amount of accepted players is equal to total number of players
-            if(numAccepted = numPlayers*2)
+            if(numAccepted == numPlayers*2)
             {
 
                 game_state = GAME_STATE.PLAYING
@@ -307,7 +305,6 @@ const gameCycle = setInterval( async () => {
                         games: {increment: 1},
                         ratio: ((player1 as PlayerType).wins) / ((player1 as PlayerType).losses + 1),
                         goals: {increment: score1}
-
                     }
                     
                 }),
@@ -461,38 +458,27 @@ server_wss_CLIENT_GM.on("upgrade", async (request, socket, head) => {
         return
     }
 
-    // Authenticate using jwt from cookie srtoken
     const srtoken = cookieObj["srtoken"]
-    const claims: any = jwt.verify(srtoken, fs.readFileSync(process.cwd()+"/cert-dev.pem"), (error, decoded) => {
-        //if error, close connection, otherwise return the decoded token
-        if(error){ 
-            socket.destroy()
-            return
-        }
-        return decoded
-    })
 
-    if(!(claims instanceof Object && claims["sub"])){ // if jwt is invalid, close connection
+    if(!srtoken){ // if srtoken cookie is empty, close connection
         socket.destroy()
         return
     }
 
-    //else, get user id from the token
-    const user_id: string = claims["sub"]
-    //make sure user is actually in the database already
-    const find_user = await prisma.player.findUnique({
+    const find_user = await prisma.player.findFirst({
         where: {
-            user_id: user_id
+            sessionToken: srtoken
         }
-    })
-    if(!find_user){ // if user is not in database, close connection
+    });
+
+    if(!find_user){ // if token is not in database, close connection
         socket.destroy()
         return
     }
 
     // valid logged in user, upgrade connection to websocket
     wss_client_gm.handleUpgrade(request, socket, head, (ws) => {
-        wss_client_gm.emit("connection", ws, request, find_user.username, user_id)
+        wss_client_gm.emit("connection", ws, request, find_user.username, find_user.user_id)
     })
 })
 
@@ -586,7 +572,7 @@ ws_raspberry.onopen = (event) => {
 }
 
 ws_raspberry.onerror = (error) => {
-    console.log("WS_RASPBERRY error: " + error)
+    console.log("WS_RASPBERRY error: " , error)
 }
 ws_raspberry.onclose = (event) => {
     console.log("WS_RASPBERRY closed")
