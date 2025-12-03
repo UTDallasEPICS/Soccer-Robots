@@ -1,6 +1,6 @@
 <!--The main file for the page, that has embedded in it all the UI components from the components folder.-->
 <template>
-        <button class="fixed bottom-4 right-4 p-2 bg-gray-200 dark:bg-gray-700 rounded text-gray-800 dark:text-gray-200 shadow-lg" @click="toggleTheme" > 🌓</button>
+  <button class="fixed bottom-4 right-4 p-2 bg-gray-200 dark:bg-gray-700 rounded text-gray-800 dark:text-gray-200 shadow-lg" @click="toggleTheme" > 🌓</button>
 
   <div class="min-h-screen w-screen overflow-x-hidden dark:bg-[#333333]">
     <div>
@@ -11,8 +11,8 @@
         <Scoreboard :timer="Number(timer ?? 0)" :user1="player1?.username ?? ''" :user2="player2?.username ?? ''" :user1score="player1?.score ?? 0 " :user2score="player2?.score ?? 0"></Scoreboard>
         <span class="py-4">
 
-                    <VideoStream streamType="twitch"></VideoStream>
-                </span>
+          <VideoStream streamType="twitch"></VideoStream>
+        </span>
       </div>
       <!--when user tries to join or leave queue, run the according functions in this file.-->
       <QueueContainer :queueUsers="queue" :theme="theme" @join-queue="joinQueue" @leave-queue="leaveQueue"></QueueContainer>
@@ -44,7 +44,7 @@ onMounted(() => {
   applyTheme()
 })
 
-// 3️⃣ toggle & persist
+// toggle & persist
 function toggleTheme() {
   theme.value = theme.value === 'light' ? 'dark' : 'light'
   localStorage.setItem('theme', theme.value)
