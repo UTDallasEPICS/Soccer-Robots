@@ -108,6 +108,13 @@ const timer = ref<Number>(0)
 const player1 = ref<{score: number, username: string}>()
 const player2 = ref<{score: number, username: string}>()
 
+watch(timer, (value) =>{
+  if(Number(value) == 0){
+    router.push("/player");
+  }
+
+})
+
 if(process.client){
   //creates the connection with the game manager. Don't have to be in the queue for this; just updates the queue, score, and timer
   sse.value = new EventSource(`http://${useRuntimeConfig().public.LOCALHOST}:${useRuntimeConfig().public.PORT_SSE_GM}/sse-info`)
