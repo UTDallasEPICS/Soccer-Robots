@@ -1,4 +1,6 @@
 #include "wifi_connectivity.h"
+#include "goalpost_mechanism.h"
+
 #include "esp_log.h"
 #include "esp_err.h"
 
@@ -38,16 +40,25 @@
 #define BLINK_PERIOD 1000
 
 #define LEDC_MODE               LEDC_LOW_SPEED_MODE
-#define LEDC_DUTY_RES           LEDC_TIMER_13_BIT // Set duty resolution to 13 bits
-#define LEDC_TIMER				LEDC_TIMER_0
-#define LEDC_FREQUENCY  350 // Frequency in Hertz. Set frequency at 4 kHz
+#define LEDC_DUTY_RES           LEDC_TIMER_13_BIT      // 13-bit duty (0–8191)
+#define LEDC_TIMER              LEDC_TIMER_0
+#define LEDC_FREQUENCY          20000                  // 20 kHz for DRV8833
 
-//YELLOW IS LEFT MOTOR, WHITE IS RIGHT MOTOR
-#define LEDC_OUTPUT_IO1	18// Define the output GPIO
-#define LEDC_OUTPUT_IO2	16 // Define the output GPIO
+//DRV8833 input pins
+//Motor A (left): IN1, IN2
+#define MOTOR_A_IN1_GPIO        GPIO_NUM_16   // DRV8833 IN1 (forward)
+#define MOTOR_A_IN2_GPIO        GPIO_NUM_18   // DRV8833 IN2 (reverse)
 
-#define LEDC_CHANNEL1            LEDC_CHANNEL_0
-#define LEDC_CHANNEL2            LEDC_CHANNEL_1
+//Motor B (right): IN3, IN4
+#define MOTOR_B_IN1_GPIO        GPIO_NUM_12   // DRV8833 IN3 (forward)
+#define MOTOR_B_IN2_GPIO        GPIO_NUM_11   // DRV8833 IN4 (reverse)
+
+//LEDC channels – 2 per motor (fwd/rev)
+#define LEDC_CH_A_FWD           LEDC_CHANNEL_0
+#define LEDC_CH_A_REV           LEDC_CHANNEL_1
+#define LEDC_CH_B_FWD           LEDC_CHANNEL_2
+#define LEDC_CH_B_REV           LEDC_CHANNEL_3
+
 
 #define FADE_RESOLUTION			10
 
@@ -77,11 +88,13 @@ static bool charging;
 static bool inGame;
 static bool resetting;
 
-// used to decide when we start reversing or moving forward and such
+// used to decide when we start reversing or moving forward and such (THIS WAS FOR ESC)
+/*
 static uint8_t lowerReverseBound = 16;
 static uint8_t upperReverseBound = 49;
 static uint8_t lowerForwardBound = 56;
 static uint8_t upperForwardBound = 89;
+*/
 
 TaskHandle_t doMovementHandle = NULL;
 bool finishedMoving = false;
@@ -563,38 +576,20 @@ float getPercentFromRawDuty(float duty)
 	return (duty*100)/(pow(2, LEDC_DUTY_RES));
 }
 
-//from the direction going from -100 to 100, gets actual duty value needed to send to the motors
-float getRawDutyFromBaseDirection(float duty)
+// Convert -100..100 "direction" into a raw duty magnitude for PWM
+// Sign (positive/negative) is handled separately in move()
+float getRawDutyFromBaseDirection(float dir)
 {
-	//if duty is positive, remember valid values are from 86 - 100. If negative, from 36-50
-	uint8_t range = upperReverseBound - lowerReverseBound;
-	//if positive movement
-	if(duty > 1)
-	{
-		//first get it between 0 and 1, then multiple to get in the forward range, then add by lower bound to get a range between loewr and upper bound.
-		//this keeps it in the correct range 56 to 89
-		duty /= 100.0;
-		duty *= range;
-		duty += lowerForwardBound;
-	}
-	// if negative movement
-	else if(duty < -1)
-	{
-		//first limit it to the range -1 to 0  by dividing by (100 / range)
-		duty /= 100.0;
-		//then put it in the correct range from say -33 to 0 by multiplying by range
-		duty *= range;
-		//now, add 33 to put it in the range 0 and 33, and then add 16 to put it in the range 16 to 49
-		duty += range + lowerReverseBound;
-	}
-	// meaning movement is roughly 0, so set it to 53 which makes it about 0.
-	else
-	{
-		duty = 53;
-	}
-	//now that we have correct duty cycle numbers, get specifically the raw duty
-	return getRawDutyFromPercent(duty);
+    float mag = fabsf(dir);          // 0..100
+    if (mag < 1.0f) {
+        return 0.0f;                 // treat tiny values as stop
+    }
+    if (mag > 100.0f) {
+        mag = 100.0f;                // clamp
+    }
+    return getRawDutyFromPercent(mag);
 }
+
 
 //converts pulse width (in ms) to the proper duty cycle RAW. Not sure if this is right, may have to check
 float convertPulseWidthToPercentDuty(int pulseWidth)
@@ -603,70 +598,130 @@ float convertPulseWidthToPercentDuty(int pulseWidth)
 	return pulseWidth/(pow(10, 6)/LEDC_FREQUENCY) * 100;
 }
 
-// sets up the PWM pins and timer
 static void ledc_setup(){
-	// Timer Configuration
-	gpio_reset_pin(LEDC_OUTPUT_IO1);
-	gpio_set_direction(LEDC_OUTPUT_IO1, GPIO_MODE_OUTPUT);
-	gpio_reset_pin(LEDC_OUTPUT_IO2);
-	gpio_set_direction(LEDC_OUTPUT_IO2, GPIO_MODE_OUTPUT);
-	
-	ledc_timer_config_t timer_conf = {
-		.speed_mode = LEDC_MODE,
-		.duty_resolution = LEDC_DUTY_RES,
-		.timer_num = LEDC_TIMER,
-		.freq_hz = LEDC_FREQUENCY,
-		.clk_cfg = LEDC_AUTO_CLK
-	};
-	ESP_ERROR_CHECK(ledc_timer_config(&timer_conf));
-	// Channel Configuration
-	ledc_channel_config_t channel_conf1 = {
-		.speed_mode = LEDC_MODE,
-		.channel = LEDC_CHANNEL1,
-		.timer_sel = LEDC_TIMER,
-		.intr_type = LEDC_INTR_DISABLE,
-		.gpio_num = LEDC_OUTPUT_IO1,
-		.duty = 0,
-		.hpoint = 0
-	};
-	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf1));
+    // Timer configuration – shared by all channels
+    ledc_timer_config_t timer_conf = {
+        .speed_mode       = LEDC_MODE,
+        .duty_resolution  = LEDC_DUTY_RES,
+        .timer_num        = LEDC_TIMER,
+        .freq_hz          = LEDC_FREQUENCY,
+        .clk_cfg          = LEDC_AUTO_CLK
+    };
+    ESP_ERROR_CHECK(ledc_timer_config(&timer_conf));
 
-	//Channel Configuration
-	ledc_channel_config_t channel_conf2 = {
-		.speed_mode = LEDC_MODE,
-		.channel = LEDC_CHANNEL2,
-		.timer_sel = LEDC_TIMER,
-		.intr_type = LEDC_INTR_DISABLE,
-		.gpio_num = LEDC_OUTPUT_IO2,
-		.duty = 0,
-		.hpoint = 0
-	};
-	ESP_ERROR_CHECK(ledc_channel_config(&channel_conf2));
+    // Motor A – forward (IN1)
+    ledc_channel_config_t ch_a_fwd = {
+        .speed_mode = LEDC_MODE,
+        .channel    = LEDC_CH_A_FWD,
+        .timer_sel  = LEDC_TIMER,
+        .intr_type  = LEDC_INTR_DISABLE,
+        .gpio_num   = MOTOR_A_IN1_GPIO,
+        .duty       = 0,
+        .hpoint     = 0
+    };
+    ESP_ERROR_CHECK(ledc_channel_config(&ch_a_fwd));
 
-	//50 means neither moves
-	uint8_t startPos = 50;
-	//Move the left motor to start position
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, startPos / 100.0 * pow(2, LEDC_DUTY_RES)));
-	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
+    // Motor A – reverse (IN2)
+    ledc_channel_config_t ch_a_rev = {
+        .speed_mode = LEDC_MODE,
+        .channel    = LEDC_CH_A_REV,
+        .timer_sel  = LEDC_TIMER,
+        .intr_type  = LEDC_INTR_DISABLE,
+        .gpio_num   = MOTOR_A_IN2_GPIO,
+        .duty       = 0,
+        .hpoint     = 0
+    };
+    ESP_ERROR_CHECK(ledc_channel_config(&ch_a_rev));
 
-	//Move the right motor
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2,  startPos / 100.0 * pow(2, LEDC_DUTY_RES)));
-	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));		
+    // Motor B – forward (IN3)
+    ledc_channel_config_t ch_b_fwd = {
+        .speed_mode = LEDC_MODE,
+        .channel    = LEDC_CH_B_FWD,
+        .timer_sel  = LEDC_TIMER,
+        .intr_type  = LEDC_INTR_DISABLE,
+        .gpio_num   = MOTOR_B_IN1_GPIO,
+        .duty       = 0,
+        .hpoint     = 0
+    };
+    ESP_ERROR_CHECK(ledc_channel_config(&ch_b_fwd));
+
+    // Motor B – reverse (IN4)
+    ledc_channel_config_t ch_b_rev = {
+        .speed_mode = LEDC_MODE,
+        .channel    = LEDC_CH_B_REV,
+        .timer_sel  = LEDC_TIMER,
+        .intr_type  = LEDC_INTR_DISABLE,
+        .gpio_num   = MOTOR_B_IN2_GPIO,
+        .duty       = 0,
+        .hpoint     = 0
+    };
+    ESP_ERROR_CHECK(ledc_channel_config(&ch_b_rev));
+
+    // Start with everything stopped
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_A_FWD, 0));
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_A_FWD));
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_A_REV, 0));
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_A_REV));
+
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_B_FWD, 0));
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_B_FWD));
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_B_REV, 0));
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_B_REV));
 }
+
 
 void move(){
-	//Move the left motor
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL1, getRawDutyFromBaseDirection(currentDirection[0])));
-	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL1));
+    // Left motor = motor A
+    float dirA = currentDirection[0];      // -100..100
+    float dutyA = getRawDutyFromBaseDirection(dirA);
 
-	//Move the right motor
-	ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL2, getRawDutyFromBaseDirection(currentDirection[1])));
-	ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL2));
+    if (fabsf(dirA) < 1.0f) {
+        // Stop: both inputs low -> coast
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_A_FWD, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_A_FWD));
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_A_REV, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_A_REV));
+    } else if (dirA > 0) {
+        // Forward: PWM on IN1, IN2 low
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_A_FWD, (uint32_t)dutyA));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_A_FWD));
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_A_REV, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_A_REV));
+    } else {
+        // Reverse: PWM on IN2, IN1 low
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_A_FWD, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_A_FWD));
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_A_REV, (uint32_t)dutyA));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_A_REV));
+    }
 
-	//ACTUAL DUTIES ARE: 56-89 FOR FORWARD (INCLUSIVE)
-	//AND THEN 16 TO 49 FOR REVERSE (INCLUSIVE), 16 IS FASTER THAN 49
+    // Right motor = motor B
+    float dirB = currentDirection[1];
+    float dutyB = getRawDutyFromBaseDirection(dirB);
 
+    if (fabsf(dirB) < 1.0f) {
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_B_FWD, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_B_FWD));
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_B_REV, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_B_REV));
+    } else if (dirB > 0) {
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_B_FWD, (uint32_t)dutyB));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_B_FWD));
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_B_REV, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_B_REV));
+    } else {
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_B_FWD, 0));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_B_FWD));
+        ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CH_B_REV, (uint32_t)dutyB));
+        ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CH_B_REV));
+    }
+
+    // Now:
+    //  - (IN1,IN2) = (PWM,0) → forward with PWM
+    //  - (IN1,IN2) = (0,PWM) → reverse with PWM
+    //  - (0,0) → coast
 }
+
 
 //just quickly putting the on-chip LED to high
 void doBlink()
@@ -677,7 +732,63 @@ void doBlink()
 	gpio_set_level(BLINK_GPIO, s_led_state);
 }
 
+/*
+void app_main(void)
+{
+    //blink so we know the ESP32 booted
+    //doBlink();
+    //vTaskDelay(pdMS_TO_TICKS(500));
+
+    //set up PWM for the DRV8833 motor driver
+    ledc_setup();
+	move();
+
+	
+    while (1) {
+
+        //both motors forward (about 40% power)
+        currentDirection[0] = 40;   //left motor
+        currentDirection[1] = 40;   //right motor
+        move();
+        ESP_LOGI("MOTOR_TEST", "Forward");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+
+
+        //stop
+        currentDirection[0] = 0;
+        currentDirection[1] = 0;
+        move();
+        ESP_LOGI("MOTOR_TEST", "Stop");
+        vTaskDelay(pdMS_TO_TICKS(1500));
+
+
+        //both motors reverse
+        currentDirection[0] = -40;
+        currentDirection[1] = -40;
+        move();
+        ESP_LOGI("MOTOR_TEST", "Reverse");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+
+        //spin in place (left fwd, right rev)
+        currentDirection[0] = 40;    // Left forward
+        currentDirection[1] = -40;   // Right reverse
+        move();
+        ESP_LOGI("MOTOR_TEST", "Spin in place");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+
+        //stop again
+        currentDirection[0] = 0;
+        currentDirection[1] = 0;
+        move();
+        ESP_LOGI("MOTOR_TEST", "Stop");
+        vTaskDelay(pdMS_TO_TICKS(1500));
+    }
+		
+}
+*/
+
 //where the program initially starts
+/*
 void app_main() {
 	//allocate space for struct, initially set everything to false
 	moveStruct = malloc(sizeof(Movement));
@@ -700,3 +811,128 @@ void app_main() {
 
 	vTaskDelay(pdMS_TO_TICKS(500));
 }
+*/
+
+
+//non-PWM motor test code
+/*
+void app_main(void)
+{
+    ledON();
+    vTaskDelay(pdMS_TO_TICKS(1000));   // 1 second pause
+
+    //configure Motor A pins as outputs
+    gpio_reset_pin(MOTOR_A_IN1_GPIO);
+    gpio_reset_pin(MOTOR_A_IN2_GPIO);
+    gpio_set_direction(MOTOR_A_IN1_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_direction(MOTOR_A_IN2_GPIO, GPIO_MODE_OUTPUT);
+
+    //continuous motor test loop
+    while (1) {
+        // Forward: IN1 = 1, IN2 = 0
+        gpio_set_level(MOTOR_A_IN1_GPIO, 1);
+        gpio_set_level(MOTOR_A_IN2_GPIO, 0);
+        vTaskDelay(pdMS_TO_TICKS(2000));   // run forward 2 seconds
+
+        // Stop: both low
+        gpio_set_level(MOTOR_A_IN1_GPIO, 0);
+        gpio_set_level(MOTOR_A_IN2_GPIO, 0);
+        vTaskDelay(pdMS_TO_TICKS(1000));   // stop 1 second
+
+        // Reverse: IN1 = 0, IN2 = 1
+        gpio_set_level(MOTOR_A_IN1_GPIO, 0);
+        gpio_set_level(MOTOR_A_IN2_GPIO, 1);
+        vTaskDelay(pdMS_TO_TICKS(2000));   // run reverse 2 seconds
+
+        // Stop again
+        gpio_set_level(MOTOR_A_IN1_GPIO, 0);
+        gpio_set_level(MOTOR_A_IN2_GPIO, 0);
+        vTaskDelay(pdMS_TO_TICKS(1000));   // stop 1 second
+    }
+
+}
+*/
+
+//PWM motor test code
+/*void app_main(void)
+{
+    //blink so we know the ESP32 booted
+    doBlink();
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    //set up PWM for the DRV8833 motor driver
+    ledc_setup();
+
+	
+    while (1) {
+
+        //both motors forward (about 40% power)
+        currentDirection[0] = 40;   //left motor
+        currentDirection[1] = 40;   //right motor
+        move();
+        ESP_LOGI("MOTOR_TEST", "Forward");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+
+
+        //stop
+        currentDirection[0] = 0;
+        currentDirection[1] = 0;
+        move();
+        ESP_LOGI("MOTOR_TEST", "Stop");
+        vTaskDelay(pdMS_TO_TICKS(1500));
+
+
+        //both motors reverse
+        currentDirection[0] = -40;
+        currentDirection[1] = -40;
+        move();
+        ESP_LOGI("MOTOR_TEST", "Reverse");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+
+        //spin in place (left fwd, right rev)
+        currentDirection[0] = 40;    // Left forward
+        currentDirection[1] = -40;   // Right reverse
+        move();
+        ESP_LOGI("MOTOR_TEST", "Spin in place");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+
+        //stop again
+        currentDirection[0] = 0;
+        currentDirection[1] = 0;
+        move();
+        ESP_LOGI("MOTOR_TEST", "Stop");
+        vTaskDelay(pdMS_TO_TICKS(1500));
+    }
+		
+}*/
+
+void app_main(void)
+{
+    // optional little delay so serial is ready
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    ESP_LOGI("MAIN", "Starting Wi-Fi for goalpost...");
+
+    if (wifi_setup_init()) {
+        ESP_LOGI("MAIN", "Wi-Fi connected, starting goalpost task");
+        xTaskCreate(goalpost_mechanism_task,
+                    "goalpost_task",
+                    4096,      // stack size
+                    NULL,
+                    4,         // priority
+                    NULL);
+    } else {
+        ESP_LOGE("MAIN", "Wi-Fi setup failed, not starting goalpost task");
+    }
+}
+
+/*
+//for testing the goalpost mechanism only
+void app_main() {
+    //blink LED to know if booted
+    //ledON();
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    //only running the goalpost mechanism
+    goalpost_mechanism_init();   // <- this never returns (has while(true))
+}*/
