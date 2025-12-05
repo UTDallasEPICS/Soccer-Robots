@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 import { nanoid } from "nanoid"
+import { setCookie } from "h3" 
 
 const prisma = new PrismaClient()
 
@@ -13,6 +14,9 @@ export default defineEventHandler(async (event) => {
 
   let player = await prisma.player.findUnique({ where: { email } })
 
+  const token = nanoid(32)
+  const expiry = new Date(Date.now() + 10 * 60 * 1000)
+  
   if (!player) {
     player = await prisma.player.create({
       data: {
@@ -23,16 +27,23 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const token = nanoid(32)
-  const expiry = new Date(Date.now() + 10 * 60 * 1000)
-
-  await prisma.player.update({
+  player = await prisma.player.update({
     where: { email },
     data: {
       magicToken: token,
       tokenExpiry: expiry
     }
   })
+
+  setCookie(event, 'magic_token', token, {
+    httpOnly: true,
+    path: '/',
+    sameSite: 'lax',
+    secure: false,
+  })
+
+console.log("player:", player);
+
 
   const loginLink = `http://localhost:3000/login?token=${token}`
 

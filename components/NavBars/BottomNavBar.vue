@@ -15,7 +15,7 @@
             <p class="nav-item dark:text-[#C0C0C0]" v-if="isLoggedIn" @click="openChangeUsername"> Change Username </p>
         </div>
         <div class="nav-item" v-if="isAdmin" @click="openAdminPanel">Admin</div>        
-        <div class="nav-login"> <TopRightNavbar /> </div>
+        <div> <Profile /> </div>
     </div>
     </div>
     <!-- overlays -->

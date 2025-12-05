@@ -29,12 +29,12 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router'
 import { useRuntimeConfig } from '#app';
 
-import TopNavBar from '@/components/TopNavBar.vue';
-import Scoreboard from '@/components/Scoreboard.vue';
-import VideoStream from '@/components/VideoStream.vue';
+import TopNavBar from '~/components/NavBars/TopNavBar.vue';
+import Scoreboard from '~/components/Gameplay/Scoreboard.vue';
+import VideoStream from '~/components/Gameplay/VideoStream.vue';
 
-import HelpOverlay from '@/components/HelpOverlay.vue';
-import HowToPlayOverlay from '@/components/HowToPlayOverlay.vue';
+import HelpOverlay from '~/components/Popups/HelpOverlay.vue';
+import HowToPlayOverlay from '~/components/Popups/HowToPlayOverlay.vue';
 
 const showHelp = ref(false);
 const showHowToPlay = ref(false);
@@ -107,6 +107,13 @@ onMounted(() => {
 const timer = ref<Number>(0)
 const player1 = ref<{score: number, username: string}>()
 const player2 = ref<{score: number, username: string}>()
+
+watch(timer, (value) =>{
+  if(Number(value) == 0){
+    router.push("/player");
+  }
+
+})
 
 if(process.client){
   //creates the connection with the game manager. Don't have to be in the queue for this; just updates the queue, score, and timer

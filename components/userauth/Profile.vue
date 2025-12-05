@@ -20,13 +20,23 @@
 </template>
 
 <script setup lang="ts">
+import { navigateTo } from '#app'
+
     import type { Player } from '@prisma/client'
     //to get play info like username, we use the cookie we have of them and find their username from it
     const getUser = useCookie<Partial<Player>>('sruser')
     let username = getUser.value?.username as string
-    //send the user to the logout page.
+    //clear cookis and send user to homepage
     const logout = async () => { 
-        window.location.href='api/logout'
+        console.log("Logging out user from Profile.vue");
+         try {
+
+            await $fetch('/api/user-logout', { method: 'POST' })
+            await navigateTo('/')
+
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
     }
 </script>
 

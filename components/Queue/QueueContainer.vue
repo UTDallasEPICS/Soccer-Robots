@@ -2,6 +2,7 @@
 
 <template>
   <div class="w-[340px] h-full">
+    
     <Upcoming :queue="queueUsers" />
     <LeaderBoardHomepage :theme="theme"/>
     <div v-if="isLoggedIn">
@@ -12,14 +13,17 @@
 
 <script setup lang="ts">
 //need to pass in the queue of all users here.
-  import Upcoming from '@/components/UpComing.vue'
-
+  import Upcoming from '~/components/Gameplay/UpComing.vue'
+  import Queue from '~/components/Queue/Queue.vue'
   const props = defineProps({
-  queueUsers: { type: Array<string>, default: [] },
+  queueUsers: { type: Array<string>, default: () => [] },
   theme: {type: String, default: "light"}
 })
 
+  
   const sruser = useCookie('sruser');
+  console.log("sruser cookie value: ", sruser.value);
   const isLoggedIn = computed(() => !!sruser.value)
+  console.log("Is user logged in? ", isLoggedIn.value);
 
 </script>
