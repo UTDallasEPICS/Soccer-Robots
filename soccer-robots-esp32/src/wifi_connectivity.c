@@ -10,6 +10,8 @@
 #include "lwip/sys.h"
 #include "nvs_flash.h"
 #include "string.h"
+#include "esp_netif.h"
+#include "lwip/ip4_addr.h"
 
 #define WIFI_SSID				CONFIG_ESP_WIFI_SSID
 #define WIFI_PASS				CONFIG_ESP_WIFI_PASSWORD
@@ -72,6 +74,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
     }
 }
 
+/*
+//let the router pick my IP
 bool wifi_init_sta(void){
 	bool done = false;
 	s_wifi_event_group = xEventGroupCreate();	
@@ -131,6 +135,100 @@ bool wifi_init_sta(void){
 	vTaskDelay(pdMS_TO_TICKS(1000));
 	return done;
 }
+*/
+
+//choose my own static IP
+bool wifi_init_sta(void)
+{
+    bool done = false;
+
+    //event group to signal when we are connected
+    s_wifi_event_group = xEventGroupCreate();
+
+    //initialize TCP/IP stack and default event loop
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+    //create the default Wi-Fi station/STA interface and keep the handle
+    esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
+
+    //change numbers to match hotspot network
+
+    esp_netif_ip_info_t ip_info;
+    IP4_ADDR(&ip_info.ip,      192, 168, 1, 50);
+	//IP4_ADDR(&ip_info.ip,      192, 168, 1, 50);  //goalpost ESP32's static IP
+	//IP4_ADDR(&ip_info.ip,      192, 168, 1, 51);  //robot 1 ESP32's static IP
+	//IP4_ADDR(&ip_info.ip,      192, 168, 1, 52);  //robot 2 ESP32's static IP
+    IP4_ADDR(&ip_info.gw,      192, 168, 1, 1);   //hotspot/router IP
+    IP4_ADDR(&ip_info.netmask, 255, 255, 255, 0);
+
+    //use static IP instead of DHCP
+    ESP_ERROR_CHECK(esp_netif_dhcpc_stop(sta_netif));          // stop DHCP client
+    ESP_ERROR_CHECK(esp_netif_set_ip_info(sta_netif, &ip_info));// set static IP
+
+    ESP_LOGI(WIFI_TAG, "Static IP set: " IPSTR, IP2STR(&ip_info.ip));
+
+    //initialize Wi-Fi driver
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    //register event handlers
+    esp_event_handler_instance_t instance_any_id;
+    esp_event_handler_instance_t instance_got_ip;
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(
+                        WIFI_EVENT,
+                        ESP_EVENT_ANY_ID,
+                        &wifi_event_handler,
+                        NULL,
+                        &instance_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(
+                        IP_EVENT,
+                        IP_EVENT_STA_GOT_IP,
+                        &wifi_event_handler,
+                        NULL,
+                        &instance_got_ip));
+
+    //configure Wi-Fi STA with SSID/password from menuconfig
+    wifi_config_t wifi_config = {
+        .sta = {
+            .ssid = WIFI_SSID,
+            .password = WIFI_PASS,
+            .threshold.authmode = ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD,
+            .sae_pwe_h2e = ESP_WIFI_SAE_MODE,
+            .sae_h2e_identifier = EXAMPLE_H2E_IDENTIFIER,
+        },
+    };
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    ESP_LOGI(WIFI_TAG, "wifi_init_sta finished, connecting to AP...");
+
+    //wait until we either connect successfully or fail
+    EventBits_t bits = xEventGroupWaitBits(
+        s_wifi_event_group,
+        WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+        pdFALSE,
+        pdFALSE,
+        portMAX_DELAY
+    );
+
+    if (bits & WIFI_CONNECTED_BIT) {
+        ESP_LOGI(WIFI_TAG, "connected to ap SSID:%s password:%s",
+                 WIFI_SSID, WIFI_PASS);
+    } else if (bits & WIFI_FAIL_BIT) {
+        ESP_LOGI(WIFI_TAG, "failed to connect to SSID:%s password:%s",
+                 WIFI_SSID, WIFI_PASS);
+    } else {
+        ESP_LOGE(WIFI_TAG, "UNEXPECTED EVENT");
+    }
+
+    done = true;
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    return done;
+}
+
 
 bool wifi_setup_init(void){
 	esp_err_t ret = nvs_flash_init();
