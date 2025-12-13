@@ -126,6 +126,7 @@ typedef struct {
 // drive the esp to one of the following targets.
 static MoveTargets moveTargets = {
     
+    /*
     {85, 85},
     {-85, -85},
     {35, 100},
@@ -135,18 +136,19 @@ static MoveTargets moveTargets = {
     {-50, 50},
     {50, -50},
     {0, 0}
-    
-    /*
-    {95, 95},
-    {-95, -95},
-    {85, 100},
-    {100, 85},
-	{-85, -100},
-	{-100, -85},
-    {-85, 85},
-    {85, -85},
-    {0, 0}
     */
+
+    //the motor orientations are flipped, so need to reverse the second value in each pair
+    {95, -95},
+    {-95, 95},
+    {90, -100},
+    {100, -90},
+	{-90, 100},
+	{-100, 90},
+    {-90, -90},
+    {90, 90},
+    {0, 0}
+    
 };
 
 //got a function from desmos, we are just plugging it in
@@ -829,65 +831,14 @@ void app_main() {
 
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
+    xTaskCreate(doMovement, "doMovement", 8192, NULL, 3, &doMovementHandle);
+
 	vTaskDelay(pdMS_TO_TICKS(3000));
 	if (wifi_setup_init()){
 		xTaskCreate(taskServer, "taskServer", 4096, (void*)AF_INET, 3, NULL);
 	}
 
 	vTaskDelay(pdMS_TO_TICKS(500));
-}
-*/
-
-
-//non-PWM motor test code
-/*
-void app_main(void)
-{
-    doBlink();
-    vTaskDelay(pdMS_TO_TICKS(1000));   // 1 second pause
-
-    //configure Motor A pins as outputs
-    gpio_reset_pin(MOTOR_A_IN1_GPIO);
-    gpio_reset_pin(MOTOR_A_IN2_GPIO);
-    gpio_set_direction(MOTOR_A_IN1_GPIO, GPIO_MODE_OUTPUT);
-    gpio_set_direction(MOTOR_A_IN2_GPIO, GPIO_MODE_OUTPUT);
-
-    gpio_reset_pin(MOTOR_B_IN1_GPIO);
-    gpio_reset_pin(MOTOR_B_IN2_GPIO);
-    gpio_set_direction(MOTOR_B_IN1_GPIO, GPIO_MODE_OUTPUT);
-    gpio_set_direction(MOTOR_B_IN2_GPIO, GPIO_MODE_OUTPUT);
-
-    //continuous motor test loop
-    while (1) {
-        // Forward: IN1 = 1, IN2 = 0
-        gpio_set_level(MOTOR_A_IN1_GPIO, 1);
-        gpio_set_level(MOTOR_A_IN2_GPIO, 0);
-        gpio_set_level(MOTOR_B_IN1_GPIO, 1);
-        gpio_set_level(MOTOR_B_IN2_GPIO, 0);
-        vTaskDelay(pdMS_TO_TICKS(2000));   // run forward 2 seconds
-
-        // Stop: both low
-        gpio_set_level(MOTOR_A_IN1_GPIO, 0);
-        gpio_set_level(MOTOR_A_IN2_GPIO, 0);
-        gpio_set_level(MOTOR_B_IN1_GPIO, 0);
-        gpio_set_level(MOTOR_B_IN2_GPIO, 0);
-        vTaskDelay(pdMS_TO_TICKS(1000));   // stop 1 second
-
-        // Reverse: IN1 = 0, IN2 = 1
-        gpio_set_level(MOTOR_A_IN1_GPIO, 0);
-        gpio_set_level(MOTOR_A_IN2_GPIO, 1);
-        gpio_set_level(MOTOR_B_IN1_GPIO, 0);
-        gpio_set_level(MOTOR_B_IN2_GPIO, 1);
-        vTaskDelay(pdMS_TO_TICKS(2000));   // run reverse 2 seconds
-
-        // Stop again
-        gpio_set_level(MOTOR_A_IN1_GPIO, 0);
-        gpio_set_level(MOTOR_A_IN2_GPIO, 0);
-        gpio_set_level(MOTOR_B_IN1_GPIO, 0);
-        gpio_set_level(MOTOR_B_IN2_GPIO, 0);
-        vTaskDelay(pdMS_TO_TICKS(1000));   // stop 1 second
-    }
-
 }
 */
 
@@ -979,9 +930,8 @@ void app_main(void)
 }
 */
 
+
 //PWM movement test code (without Wi-Fi or server stuff)
-
-
 void app_main(void)
 {
     doBlink();
@@ -1018,25 +968,25 @@ void app_main(void)
     // combinations like "ur" = forward-right, "dl" = back-left, "" = stop
     const char *commands[] = {
         "u",   // full forward
-        "ur",  // forward-right
-        "r",   // spin/turn right in place
-        "dr",  // back-right
         "d",   // full back
-        "dl",  // back-left
-        "l",   // spin/turn left in place
         "ul",  // forward-left
+        "ur",  // forward-right
+        "dl",  // back-left
+        "dr",  // back-right
+        "l",   // spin/turn left in place
+        "r",   // spin/turn right in place
         ""     // stop
     };
 
     const char *command_names[] = {
         "Full forward",
-        "Forward-right",
-        "Right turn/spin",
-        "Back-right",
         "Full back",
-        "Back-left",
-        "Left turn/spin",
         "Forward-left",
+        "Forward-right",
+        "Back-left",
+        "Back-right",
+        "Left turn/spin",
+        "Right turn/spin",
         "Stop"
     };
 
@@ -1055,7 +1005,7 @@ void app_main(void)
         xSemaphoreGive(waitForData);
 
         //let the robot move for a bit (3 seconds per command)
-        vTaskDelay(pdMS_TO_TICKS(3000));
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
     ESP_LOGI("TEST", "Command sequence complete. Holding stop.");
