@@ -14,7 +14,7 @@
 
     <!-- Twitch Stream -->
     <div class="stream-container">
-      <VideoStream streamType="twitch" />
+      <VideoStream streamType="mjpeg" />
     </div>
 
     <!-- Upcoming Matches -->

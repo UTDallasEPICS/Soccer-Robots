@@ -11,7 +11,7 @@
         <Scoreboard :timer="Number(timer ?? 0)" :user1="player1?.username ?? ''" :user2="player2?.username ?? ''" :user1score="player1?.score ?? 0 " :user2score="player2?.score ?? 0"></Scoreboard>
         <span class="py-4">
 
-          <VideoStream streamType="twitch"></VideoStream>
+          <VideoStream streamType="mjpeg"></VideoStream>
         </span>
       </div>
       <!--when user tries to join or leave queue, run the according functions in this file.-->
