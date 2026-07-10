@@ -20,7 +20,7 @@ If this is the case, find the required chipset.
 Install the chipset onto the driver by cloning the driver repo best suited and following the steps.
 
 Ensure you have the right developer tools.
-**sudo apt install -y build-essential bc dkms git**
+**sudo apt install -y build-essential bc dkms git raspberrypi-kernel-headers**
 
 ### Starting the hotspot
 To broadcast the hotspot, run the following command to create a hotspot, replacing the [hotspot name] and [hotspot password] placeholders with a hotspot name and password of your choice

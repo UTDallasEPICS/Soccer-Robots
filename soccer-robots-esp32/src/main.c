@@ -1,4 +1,5 @@
 #include "wifi_connectivity.h"
+#include "goalpost_mechanism.h"
 
 #include "esp_log.h"
 #include "esp_err.h"
@@ -16,7 +17,7 @@
 
 #include "soc/clk_tree_defs.h"
 
-/* #include "protocol_examples_common.h" // Wi-Fi connectivity */
+// Wi-Fi connectivity
 #include <sys/socket.h>		// Sockets
 #include <unistd.h>			// Close
 #include <netdb.h>			// gethostbyname
@@ -39,18 +40,18 @@
 #define BLINK_PERIOD 1000
 
 #define LEDC_MODE               LEDC_LOW_SPEED_MODE
-#define LEDC_DUTY_RES           LEDC_TIMER_13_BIT      // 13-bit duty (0–8191)
+#define LEDC_DUTY_RES           LEDC_TIMER_10_BIT      // 13-bit duty (0–8191) //changed to 10 bit
 #define LEDC_TIMER              LEDC_TIMER_0
-#define LEDC_FREQUENCY          20000                  // 20 kHz for DRV8833
+#define LEDC_FREQUENCY          10000                  // 20 kHz for DRV8833 //changed to 10kHz
 
 //DRV8833 input pins
 //Motor A (left): IN1, IN2
-#define MOTOR_A_IN1_GPIO        GPIO_NUM_16   // DRV8833 IN1 (forward)
-#define MOTOR_A_IN2_GPIO        GPIO_NUM_18   // DRV8833 IN2 (reverse)
+#define MOTOR_A_IN1_GPIO        GPIO_NUM_14   // DRV8833 IN1 (forward)
+#define MOTOR_A_IN2_GPIO        GPIO_NUM_13   // DRV8833 IN2 (reverse)
 
 //Motor B (right): IN3, IN4
-#define MOTOR_B_IN1_GPIO        GPIO_NUM_12   // DRV8833 IN3 (forward)
-#define MOTOR_B_IN2_GPIO        GPIO_NUM_11   // DRV8833 IN4 (reverse)
+#define MOTOR_B_IN1_GPIO        GPIO_NUM_21   // DRV8833 IN3 (forward)
+#define MOTOR_B_IN2_GPIO        GPIO_NUM_17   // DRV8833 IN4 (reverse)
 
 //LEDC channels – 2 per motor (fwd/rev)
 #define LEDC_CH_A_FWD           LEDC_CHANNEL_0
@@ -58,9 +59,7 @@
 #define LEDC_CH_B_FWD           LEDC_CHANNEL_2
 #define LEDC_CH_B_REV           LEDC_CHANNEL_3
 
-
 #define FADE_RESOLUTION			10
-
 
 static timer_config_t config = {
     .alarm_en = TIMER_ALARM_DIS,        // don’t need alarm
@@ -75,7 +74,7 @@ static timer_config_t config = {
 
 
 // Prototypes
-static void setup();
+//static void setup();
 void move();
 
 typedef struct sockaddr SA;
@@ -126,6 +125,8 @@ typedef struct {
 // Initialize the struct after declaration. Basically depending on the input from the player, we will
 // drive the esp to one of the following targets.
 static MoveTargets moveTargets = {
+    
+    /*
     {85, 85},
     {-85, -85},
     {35, 100},
@@ -135,6 +136,19 @@ static MoveTargets moveTargets = {
     {-50, 50},
     {50, -50},
     {0, 0}
+    */
+
+    //the motor orientations are flipped, so need to reverse the second value in each pair
+    {95, -95},
+    {-95, 95},
+    {90, -100},
+    {100, -90},
+	{-90, 100},
+	{-100, 90},
+    {-90, -90},
+    {90, 90},
+    {0, 0}
+    
 };
 
 //got a function from desmos, we are just plugging it in
@@ -292,9 +306,12 @@ void doMovement(void *pvParameters)
 			timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &x);
 			//we'll need to do x / 2 - 250 for two reasons. First, we divide by 2 because the timer increments every half a millisecond, so its value
 			//is double what we need. Also, it only allows positive values, so we have to make it from 0-500 and then subtract by 250 to get -250 to 250.
+
+            /*
 			ESP_LOGI("DEBUG", "Direction Left is %f, Direction Right is %f, forward is %d, left is %d, right is %d, back is %d, x is %d.", 
 				currentDirection[0], currentDirection[1], moveStruct->forward, moveStruct->left, moveStruct->right, moveStruct->back, (int16_t) (x/2 - 250));	
-	
+	        */
+
 			//once we reach our limit, we break out of our movement loop and wait
 			if(x >= 1000)
 			{
@@ -564,9 +581,20 @@ CLEAN_UP:
 
 //Gets the raw duty value from the percentage from 0 to 100. 
 float getRawDutyFromPercent(float duty){	
+    /*
 	//divide to convert from percent to decimal
 	duty /= 100;	
 	return (pow(2, LEDC_DUTY_RES) * duty);
+    */
+    // clamp input to 0–100 so nothing weird happens
+    if (duty < 0.0f) duty = 0.0f;
+    if (duty > 100.0f) duty = 100.0f;
+
+    // compute the maximum raw duty value: 2^N - 1
+    float max_duty = (1 << LEDC_DUTY_RES) - 1;   // e.g. 1023 for 10-bit
+
+    // scale percent 0–100 → raw 0–max_duty
+    return (max_duty * (duty / 100.0f));
 }
 
 //unused method, but we do keep it just in case. 
@@ -731,6 +759,7 @@ void doBlink()
 	gpio_set_level(BLINK_GPIO, s_led_state);
 }
 
+/*
 void app_main(void)
 {
     //blink so we know the ESP32 booted
@@ -783,18 +812,6 @@ void app_main(void)
     }
 		
 }
-
-
-//for testing the goalpost mechanism only
-/*
-void app_main() {
-    //blink LED to know if booted
-    doBlink();
-    vTaskDelay(pdMS_TO_TICKS(1000));
-
-    //only running the goalpost mechanism
-    goalpost_mechanism_init();   // <- this never returns (has while(true))
-}
 */
 
 //where the program initially starts
@@ -814,6 +831,8 @@ void app_main() {
 
 	vTaskDelay(pdMS_TO_TICKS(1000));
 
+    xTaskCreate(doMovement, "doMovement", 8192, NULL, 3, &doMovementHandle);
+
 	vTaskDelay(pdMS_TO_TICKS(3000));
 	if (wifi_setup_init()){
 		xTaskCreate(taskServer, "taskServer", 4096, (void*)AF_INET, 3, NULL);
@@ -822,3 +841,177 @@ void app_main() {
 	vTaskDelay(pdMS_TO_TICKS(500));
 }
 */
+
+/*
+//PWM motor test code
+void app_main(void)
+{
+    //blink so we know the ESP32 booted
+    doBlink();
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    //set up PWM for the DRV8833 motor driver
+    ledc_setup();
+
+	
+    while (1) {
+
+        //both motors forward (about 40% power)
+        currentDirection[0] = 90;   //left motor
+        currentDirection[1] = 90;   //right motor
+        move();
+        ESP_LOGI("MOTOR_TEST", "Forward");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+
+
+        //stop
+        currentDirection[0] = 0;
+        currentDirection[1] = 0;
+        move();
+        ESP_LOGI("MOTOR_TEST", "Stop");
+        vTaskDelay(pdMS_TO_TICKS(1500));
+
+
+        //both motors reverse
+        currentDirection[0] = -90;
+        currentDirection[1] = -90;
+        move();
+        ESP_LOGI("MOTOR_TEST", "Reverse");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+
+        //spin in place (left fwd, right rev)
+        currentDirection[0] = 90;    // Left forward
+        currentDirection[1] = -90;   // Right reverse
+        move();
+        ESP_LOGI("MOTOR_TEST", "Spin in place");
+        vTaskDelay(pdMS_TO_TICKS(2000));
+
+        //stop again
+        currentDirection[0] = 0;
+        currentDirection[1] = 0;
+        move();
+        ESP_LOGI("MOTOR_TEST", "Stop");
+        vTaskDelay(pdMS_TO_TICKS(1500));
+    }	
+}
+*/
+
+/*
+//test goalpost mechanism with wifi and server
+void app_main(void)
+{
+    doBlink();
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    //ESP_LOGI("MAIN", "Starting Wi-Fi for goalpost...");
+
+    //wifi_setup_init();
+
+    xTaskCreate(goalpost_mechanism_task,
+                "goalpost_task",
+                4096,
+                NULL,
+                4,
+                NULL);
+
+    
+    if (wifi_setup_init()) {
+        ESP_LOGI("MAIN", "Wi-Fi connected, starting goalpost task");
+        xTaskCreate(goalpost_mechanism_task,
+                    "goalpost_task",
+                    4096,      // stack size
+                    NULL,
+                    4,         // priority
+                    NULL);
+    } else {
+        ESP_LOGE("MAIN", "Wi-Fi setup failed, not starting goalpost task");
+    }
+    
+}
+*/
+
+
+//PWM movement test code (without Wi-Fi or server stuff)
+void app_main(void)
+{
+    doBlink();
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    //allocate and initialize movement struct
+    moveStruct = malloc(sizeof(Movement));
+    *moveStruct = (Movement){ .forward = false, .left = false, .right = false, .back = false };
+
+    charging  = false;
+    inGame    = false;
+    resetting = false;
+
+    //create the binary semaphore used by doMovement()
+    waitForData = xSemaphoreCreateBinary();
+
+    //init hardware timer used inside doMovement() / pwmFunction()
+    timer_init(TIMER_GROUP_0, TIMER_0, &config);
+
+    //set up LEDC PWM on the DRV8833 pins
+    ledc_setup();
+
+    ESP_LOGI("TEST", "Starting PWM movement test (no Wi-Fi)");
+
+    //start the movement task (same one used in the real game)
+    xTaskCreate(doMovement, "doMovement", 8192, NULL, 3, &doMovementHandle);
+
+    //give doMovement time to run its first test move
+    //it ramps from currentDirection to stop, then waits on the semaphore
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    // test fake streaming commands
+    // u = forward, d = back, l = left, r = right
+    // combinations like "ur" = forward-right, "dl" = back-left, "" = stop
+    const char *commands[] = {
+        "u",   // full forward
+        "d",   // full back
+        "ul",  // forward-left
+        "ur",  // forward-right
+        "dl",  // back-left
+        "dr",  // back-right
+        "l",   // spin/turn left in place
+        "r",   // spin/turn right in place
+        ""     // stop
+    };
+
+    const char *command_names[] = {
+        "Full forward",
+        "Full back",
+        "Forward-left",
+        "Forward-right",
+        "Back-left",
+        "Back-right",
+        "Left turn/spin",
+        "Right turn/spin",
+        "Stop"
+    };
+
+    const int num_cmds = sizeof(commands) / sizeof(commands[0]);
+
+    for (int i = 0; i < num_cmds; i++) {
+        const char *cmd = commands[i];
+        int len = strlen(cmd);
+
+        //function parses 'u', 'd', 'l', 'r' exactly like in the real game
+        setMoveStruct((char *)cmd, len);
+
+        ESP_LOGI("TEST", ">>> Command %d: %s (\"%s\")", i + 1, command_names[i], cmd[0] ? cmd : "none/stop");
+
+        //wake up the movement task so it ramps to the new target
+        xSemaphoreGive(waitForData);
+
+        //let the robot move for a bit (3 seconds per command)
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    ESP_LOGI("TEST", "Command sequence complete. Holding stop.");
+
+    //keep the task alive, doMovement will sit at the stop target
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}

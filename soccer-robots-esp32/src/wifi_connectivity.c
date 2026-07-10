@@ -142,4 +142,3 @@ bool wifi_setup_init(void){
 	ESP_LOGI(WIFI_TAG, "ESP_WIFI_MODE_STA");
 	return wifi_init_sta();
 }
-
