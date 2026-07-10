@@ -252,89 +252,94 @@ wss.on("connection", (ws: any, request: IncomingMessage, user_id: string) => {
 
     //when a client sends a message, send it to the raspberry pi server (the one still on the website, not the pi itself)
     ws.on("message", (data: any) => {
-        const { type, payload } = JSON.parse(data)
-        //currently only supports key inputs
-        if(type === "KEY_INPUT"){
-            // example payload in form of "1010", corresponding to "wasd", 1 for on, 0 for off
-            const regex = /[01][01][01][01]/
-            //tests if it's formatted properly; if so, send the data
-            if(regex.test(payload)){
-                console.log(`PLAYER ${playernumber}: ${user_id} | ${type} : ${payload}`)
-                // Forward KEY_INPUT with the player # to Raspberry server
-                ws_raspberry.send(JSON.stringify({
-                    "type": "KEY_INPUT",
-                    "payload": {
-                        "keys": payload,
-                        "playernumber": playernumber
-                    }
-                }))
+    const msg = JSON.parse(data);
+    const type = msg.type;
+    const payload = msg.payload;
+
+    if (type === "KEY_INPUT") {
+
+        // --- VALIDATE ---
+        if (typeof payload !== "string") return;
+        if (!/^[01]{4}$/.test(payload)) return;
+
+        console.log(`PLAYER ${playernumber}: ${user_id} | INPUT = ${payload}`);
+
+        // --- FORWARD TO RASPBERRY ---
+        ws_raspberry.send(JSON.stringify({
+            type: "KEY_INPUT",
+            payload: {
+                keys: payload,
+                playernumber
             }
-        }
-    })
+        }));
+    }
+});
+
     allowedUsers[index]["ws"] = ws
-    ws.send("CONNECTED")
+    ws.send(JSON.stringify({ type: "CONNECTED" }))
 })
 
 // check for upgrade request to websocket from a logged in user
 // different from a typical http request like GET or POST. But to do
 // this, need to validate security stuff
 server.on("upgrade", async (request, socket, head) => {
-    // Get cookies
-    const cookies = request.headers["cookie"] ?? ""
-    if(cookies === ""){ // if no cookies, close connection
-        socket.destroy()
-        return
-    }
-    //split cookies into their key-value pairs
-    const cookiepairs = cookies.split(";");
-    //for each key-value, split it further, such that each element in cookiesplittedPairs is an array where the first element is the key, the 2nd is the value.
-    const cookiesplittedPairs = cookiepairs.map(cookie => cookie.split("="));
-    const cookieObj: { [key: string]: string } = {}
-    //now for each pair, we decode any special characters that might have been encoded
-    cookiesplittedPairs.forEach((pair) => {
-        // set each cookie value in the cookieObj. cookieObj is a dictionary with the keys being the cookie keys, with their values
-        //being the correspondign values
-        cookieObj[decodeURIComponent(pair[0].trim())] = decodeURIComponent(pair[1].trim())
-    })
-
-    if(!(cookieObj["srtoken"] && cookieObj["accesspassword"])){ // if no srtoken cookie or accesspassword cookie, close connection
-        socket.destroy()
-        return
-    }
-
-    if(cookieObj["accesspassword"] !== CONTROLLER_ACCESS){ // if accesspassword is invalid, close connection
-        socket.destroy()
-        return
-    }
-
-    // Authenticate using jwt from cookie srtoken
-    const srtoken = cookieObj["srtoken"]
-    const claims: any = jwt.verify(srtoken, fs.readFileSync(process.cwd()+"/cert-dev.pem"), (error, decoded) => {
-        //if the claims failed, destroy it. otherwise, return the decoded srtoken
-        if(error){ 
-            socket.destroy()
-            return
+    try {
+        // 1️⃣ Parse cookies
+        const cookiesHeader = request.headers["cookie"] ?? "";
+        if (!cookiesHeader) {
+            socket.destroy();
+            return;
         }
-        return decoded
-    })
 
-    if(!(claims instanceof Object && claims["sub"])){ // if jwt is invalid, close connection
-        socket.destroy()
-        return
+        const cookiePairs = cookiesHeader.split(";").map(c => c.split("="));
+        const cookieObj: Record<string, string> = {};
+        cookiePairs.forEach(([key, value]) => {
+            if (key && value) {
+                cookieObj[decodeURIComponent(key.trim())] = decodeURIComponent(value.trim());
+            }
+        });
+
+        // 2️⃣ Check for session token and controller access
+        const srtoken = cookieObj["srtoken"];
+        const accesspassword = cookieObj["accesspassword"];
+        if (!srtoken || !accesspassword) {
+            socket.destroy();
+            return;
+        }
+
+        if (accesspassword !== CONTROLLER_ACCESS) {
+            socket.destroy();
+            return;
+        }
+
+        // 3️⃣ Lookup user in database by session token
+        const user = await prisma.player.findFirst({
+            where: { sessionToken: srtoken }
+        });
+
+        if (!user) {
+            socket.destroy();
+            return;
+        }
+
+        // 4️⃣ Ensure user is allowed
+        const allowedIndex = allowedUsers.findIndex(e => e.user_id === user.user_id);
+        if (allowedIndex === -1) {
+            socket.destroy();
+            return;
+        }
+
+        // ✅ Upgrade to WebSocket
+        wss.handleUpgrade(request, socket, head, (ws) => {
+            wss.emit("connection", ws, request, user.user_id);
+        });
+
+    } catch (err) {
+        console.error("WebSocket upgrade failed:", err);
+        socket.destroy();
     }
+});
 
-    const user_id: string = claims["sub"]
-    
-    if(allowedUsers.findIndex((element) => { return element["user_id"] === user_id}) === -1){ // if user is not in allowedUsers, close connection
-        socket.destroy()
-        return
-    }
-
-    // valid logged in user, upgrade connection to websocket
-    wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit("connection", ws, request, user_id)
-    })
-})
 
 server.listen(PORT_WSS_CLIENT, () => {
     console.log(`SERVER is running on http://${LOCALHOST}:${PORT_WSS_CLIENT}`)

@@ -13,7 +13,7 @@
 
     <!-- Twitch Stream -->
     <div class="stream-container">
-      <VideoStream streamType="janus" />
+      <VideoStream streamType="mjpeg" />
     </div>
 
     <!-- Overlays -->
@@ -61,6 +61,7 @@ onMounted(() => {
   ws_controller.value.onopen = () => {
     const wasdMapping: { [key: string]: number, "w": number, "a": number, "s": number, "d": number } = {"w": 0, "a": 0, "s": 0, "d": 0}
     const updateKeyUp = (event: KeyboardEvent) => {
+            console.log("KILL ME2")
         
       if(wasdMapping.hasOwnProperty(event.key)){
         wasdMapping[event.key] = 0
@@ -69,6 +70,7 @@ onMounted(() => {
     }
         
     const updateKeyDown = (event: KeyboardEvent) => {
+      console.log("KILL ME")
       if(event.repeat){
         console.log("repeating")
       }
@@ -82,7 +84,9 @@ onMounted(() => {
     window.addEventListener("keydown", updateKeyDown)
 
     const keyInputs = () => {
-      if(ws_controller.value?.OPEN){
+            console.log("KILL ME3")
+
+      if(ws_controller.value?.readyState === WebSocket.OPEN){
 
         const message = {
           type: "KEY_INPUT",

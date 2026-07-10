@@ -9,7 +9,7 @@
       class="stream-frame"
     ></iframe>
 
-    <!-- Janus Embed -->
+    <!-- Janus (WebRTC) -->
     <div v-else-if="streamType === 'janus'" class="stream-frame">
       <video
         id="janus-video"
@@ -19,6 +19,15 @@
         controls
         ref="janusVideo"
       ></video>
+    </div>
+
+    <!-- MJPEG Stream -->
+    <div v-else-if="streamType === 'mjpeg'" class="stream-frame">
+      <img
+        :src="mjpegUrl"
+        class="mjpeg-frame"
+        alt="MJPEG Stream"
+      />
     </div>
 
     <!-- Fallback -->
@@ -35,19 +44,23 @@ const props = defineProps({
   streamType: {
     type: String,
     required: true,
-    validator: (value) => ['twitch', 'janus'].includes(value),
+    // Add mjpeg as allowed:
+    validator: (value) => ['twitch', 'janus', 'mjpeg'].includes(value),
   },
 });
 
+// Reference to Janus <video> tag
 const janusVideo = ref(null);
 
+// Hard-coded for now, or pass from parent:
+const mjpegUrl = `http://172.20.10.11:8000/stream.mjpg`;
+
+// Twitch embed
 const twitchEmbedUrl = 'https://player.twitch.tv/?channel=Soccer_Robots&parent=localhost';
 
 onMounted(() => {
   if (props.streamType === 'janus') {
-    // Janus WebRTC here
-    // Placeholder for now:
-    console.log('Janus stream to be initialized by awesome pie');
+    console.log('Initialize Janus WebRTC');
   }
 });
 </script>
@@ -63,6 +76,12 @@ onMounted(() => {
 .stream-frame {
   width: 100%;
   height: 540px;
+}
+
+.mjpeg-frame {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .error-msg {
