@@ -4,7 +4,6 @@
 
 Before starting anything, make sure you have installed the Driver for the WI-FI Adapter. You must also install all libraries to use the camera.
 
-
 ### Installing Camera Libraries
 
 You will need libcamera and picamera2 
@@ -12,6 +11,19 @@ You will need libcamera and picamera2
 **sudo apt install -y python3-picamera2**
 [TROUBLE SHOOTING](https://www.youtube.com/watch?time_continue=356&v=U7yVpYv3gxQ&embeds_referring_euri=https%3A%2F%2Fwww.google.com%2Fsearch%3Fq%3Dconnecting%2Bcamera%2Bmodule%2B3%2Bto%2Bpi4%26rlz%3D1C1VDKB_enUS994US994%26oq%3Dconnecting%2Bcamera%2Bmodule%2B3%2Bto%2Bpi4%26&source_ve_path=MzY4NDIsMzY4NDIsMzY4NDIsMzY4NDIsMzY4NDIsMzY4NDIsMzY4NDIsMzY4NDIsMzY4NDIsMTM5MTE3LDIzODUx)
 
+### For the Arducam IMX 219 Detection
+
+Open the Configuration File
+**sudo nano /boot/firmware/config.txt**
+
+Disable auto detect and add overlay. Edit these lines.
+**camera_auto_detect=0**
+**dtoverlay=imx219**
+
+Reboot Pi
+**sudo reboot**
+
+Check camera connection
 
 ### Installing WI-FI Driver
 When testing if the driver is installed type lsusb in the command line to find usb name and position. Type lsusb -t and find usb. look for "Driver=". If there is nothing there like rtl8852bu then the driver is not installed.
