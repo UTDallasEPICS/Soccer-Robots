@@ -17,9 +17,11 @@ Open the Configuration File
 
 **sudo nano /boot/firmware/config.txt**
 
+
 Disable auto detect and add overlay. Edit these lines.
 
 **camera_auto_detect=0**
+
 **dtoverlay=imx219**
 
 Reboot Pi
