@@ -25,6 +25,7 @@ Disable auto detect and add overlay. Edit these lines.
 **dtoverlay=imx219**
 
 Reboot Pi
+
 **sudo reboot**
 
 Check camera connection
