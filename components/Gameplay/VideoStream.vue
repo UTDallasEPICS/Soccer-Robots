@@ -9,6 +9,14 @@
       class="stream-frame"
     ></iframe>
 
+    <!-- MJPEG Stream -->
+    <iframe
+  v-else-if="streamType === 'mjpeg'"
+  :src="mjpegPageUrl"
+  frameborder="0"
+  class="stream-frame"
+></iframe>
+
     <!-- Janus Embed -->
     <div v-else-if="streamType === 'janus'" class="stream-frame">
       <video
@@ -35,19 +43,21 @@ const props = defineProps({
   streamType: {
     type: String,
     required: true,
-    validator: (value) => ['twitch', 'janus'].includes(value),
+    validator: (value) =>
+      ['twitch', 'janus', 'mjpeg'].includes(value),
   },
 });
 
 const janusVideo = ref(null);
+const mjpegPageUrl = 'http://10.159.181.248:8000/index.html';
+const twitchEmbedUrl =
+  'https://player.twitch.tv/?channel=Soccer_Robots&parent=localhost';
 
-const twitchEmbedUrl = 'https://player.twitch.tv/?channel=Soccer_Robots&parent=localhost';
+
 
 onMounted(() => {
   if (props.streamType === 'janus') {
-    // Janus WebRTC here
-    // Placeholder for now:
-    console.log('Janus stream to be initialized by awesome pie');
+    console.log('Janus stream to be initialized');
   }
 });
 </script>
@@ -61,8 +71,17 @@ onMounted(() => {
 }
 
 .stream-frame {
+  display: block;
   width: 100%;
   height: 540px;
+  object-fit: contain;
+  border: 0;
+}
+
+#janus-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .error-msg {
